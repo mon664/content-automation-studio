@@ -650,7 +650,7 @@
             publishToMultiplePlatforms();
         }
 
-        function publishToMultiplePlatforms() {
+        async function publishToMultiplePlatforms() {
             const results = [];
 
             selectedPlatforms.forEach(async (platform) => {
@@ -830,7 +830,7 @@
             showContentPreview(previewData);
         }
 
-        function showContentPreview(data) {
+        async function showContentPreview(data) {
             const previewDiv = document.getElementById('contentPreview');
             const contentDiv = document.getElementById('previewContent');
 

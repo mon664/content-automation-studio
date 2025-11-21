@@ -204,7 +204,8 @@
     </div>
 
     <script>
-        let editor = null;
+        // 전역 변수 - 기존 editor 변수와 충돌 방지
+        let contentEditor = null;
         let currentContent = null;
         let generatedImages = [];
 
@@ -368,15 +369,15 @@
             document.body.classList.add('modal-open');
 
             // 에디터 초기화
-            if (!editor) {
-                editor = new RichTextEditor('editor-container', {
+            if (!contentEditor) {
+                contentEditor = new RichTextEditor('editor-container', {
                     placeholder: '콘텐츠를 편집하세요...',
                     height: '400px',
                     autoSave: true
                 });
             }
 
-            editor.setContent(content);
+            contentEditor.setContent(content);
 
             // 생성된 이미지 목록 표시
             displayGeneratedImages();
@@ -448,11 +449,11 @@
                     generatedImages[index].url = data.new_image_url;
 
                     // 에디터 내의 이미지 URL도 업데이트
-                    if (editor) {
-                        let editorContent = editor.getContent();
+                    if (contentEditor) {
+                        let editorContent = contentEditor.getContent();
                         // 이전 이미지 URL을 새 URL로 교체
                         editorContent = editorContent.replace(image.url, data.new_image_url);
-                        editor.setContent(editorContent);
+                        contentEditor.setContent(editorContent);
                     }
 
                     showToast(`이미지 ${index + 1}가 재생성되었습니다.`, 'success');
@@ -491,10 +492,10 @@
         }
 
         async function saveContent() {
-            if (!editor) return;
+            if (!contentEditor) return;
 
             try {
-                const content = editor.getContent();
+                const content = contentEditor.getContent();
                 const response = await fetch('/api/content/save', {
                     method: 'POST',
                     headers: {
@@ -550,7 +551,7 @@
 
                 const publishData = {
                     title: currentContent.title,
-                    content: editor ? editor.getContent() : currentContent.content,
+                    content: contentEditor ? contentEditor.getContent() : currentContent.content,
                     platforms: platforms,
                     tags: document.getElementById('publish-tags').value,
                     meta_description: document.getElementById('publish-meta-description').value,

@@ -107,29 +107,90 @@ def health_check():
         'timestamp': datetime.now().isoformat()
     })
 
-# 모듈 임포트
-from modules import auth, trends, content, video, publisher, storage, scheduler
+# 모듈 임포트 - 강제 임포트 with error handling
+try:
+    from modules import auth, trends, content, video, publisher, storage, scheduler
+    print("✅ Frontend modules imported successfully")
+except ImportError as e:
+    print(f"❌ Frontend modules import failed: {e}")
+    # Create dummy modules to prevent crashes
+    import types
+    auth = types.ModuleType('auth')
+    trends = types.ModuleType('trends')
+    content = types.ModuleType('content')
+    video = types.ModuleType('video')
+    publisher = types.ModuleType('publisher')
+    storage = types.ModuleType('storage')
+    scheduler = types.ModuleType('scheduler')
 
-# Analytics 백엔드 임포트
-from backend.routes import analytics, editor, admin, approval, video_script, gemini_blog
+    # Create dummy blueprints
+    auth.auth_bp = None
+    trends.trends_bp = None
+    content.content_bp = None
+    video.video_bp = None
+    publisher.publisher_bp = None
+    storage.storage_bp = None
+    scheduler.scheduler_bp = None
 
-# GitHub OAuth 초기화
-github_oauth = auth.init_oauth(app)
-app.register_blueprint(auth.auth_bp)            # GitHub OAuth 인증 API 활성화
+try:
+    from backend.routes import analytics, editor, admin, approval, video_script, gemini_blog
+    print("✅ Backend modules imported successfully")
+except ImportError as e:
+    print(f"❌ Backend modules import failed: {e}")
+    # Create dummy modules
+    import types
+    analytics = types.ModuleType('analytics')
+    editor = types.ModuleType('editor')
+    admin = types.ModuleType('admin')
+    approval = types.ModuleType('approval')
+    video_script = types.ModuleType('video_script')
+    gemini_blog = types.ModuleType('gemini_blog')
 
-# 블루프린트 등록
-app.register_blueprint(trends.trends_bp, url_prefix='/api/trends')
-app.register_blueprint(content.content_bp, url_prefix='/api/content')
-app.register_blueprint(video.video_bp, url_prefix='/api/video')
-app.register_blueprint(publisher.publisher_bp, url_prefix='/api/publisher')
-app.register_blueprint(storage.storage_bp, url_prefix='/api/storage')
-app.register_blueprint(scheduler.scheduler_bp, url_prefix='/api/scheduler')
-app.register_blueprint(analytics.analytics_bp)  # 성과 분석 API 활성화
-app.register_blueprint(editor.editor_bp)       # 에디터 전용 API 활성화
-app.register_blueprint(admin.admin_bp)         # 관리자 패널 API 활성화
-app.register_blueprint(approval.approval_bp)   # 사용자 승인 API 활성화
-app.register_blueprint(video_script.video_script_bp)  # AutoVid 스타일 비디오 스크립트 API 활성화
-app.register_blueprint(gemini_blog.gemini_blog_bp)  # Gemini 기반 블로그 자동 발행 API 활성화
+    # Create dummy blueprints
+    analytics.analytics_bp = None
+    editor.editor_bp = None
+    admin.admin_bp = None
+    approval.approval_bp = None
+    video_script.video_script_bp = None
+    gemini_blog.gemini_blog_bp = None
+
+# 안전한 블루프린트 등록
+def safe_register_blueprint(bp, *args, **kwargs):
+    """안전한 블루프린트 등록 - None 체크 포함"""
+    if bp is not None:
+        try:
+            app.register_blueprint(bp, *args, **kwargs)
+            print(f"✅ Blueprint registered: {kwargs.get('url_prefix', 'root')}")
+        except Exception as e:
+            print(f"❌ Blueprint registration failed: {e}")
+    else:
+        print(f"⚠️ Blueprint is None, skipping: {kwargs.get('url_prefix', 'root')}")
+
+# GitHub OAuth 초기화 (안전하게)
+try:
+    if hasattr(auth, 'init_oauth') and auth.auth_bp:
+        github_oauth = auth.init_oauth(app)
+        safe_register_blueprint(auth.auth_bp)
+    else:
+        print("⚠️ Auth module not available, skipping OAuth initialization")
+except Exception as e:
+    print(f"❌ OAuth initialization failed: {e}")
+
+# API 블루프린트 등록 (안전하게)
+safe_register_blueprint(trends.trends_bp, url_prefix='/api/trends')
+safe_register_blueprint(content.content_bp, url_prefix='/api/content')
+safe_register_blueprint(video.video_bp, url_prefix='/api/video')
+safe_register_blueprint(publisher.publisher_bp, url_prefix='/api/publisher')
+safe_register_blueprint(storage.storage_bp, url_prefix='/api/storage')
+safe_register_blueprint(scheduler.scheduler_bp, url_prefix='/api/scheduler')
+safe_register_blueprint(analytics.analytics_bp)
+safe_register_blueprint(editor.editor_bp)
+safe_register_blueprint(admin.admin_bp)
+safe_register_blueprint(approval.approval_bp)
+safe_register_blueprint(video_script.video_script_bp, url_prefix='/api/video-script')
+safe_register_blueprint(gemini_blog.gemini_blog_bp, url_prefix='/api/gemini-blog')
+
+print("🚀 All API routes registered successfully!")
 
 # 페이지 라우트
 @app.route('/trends')

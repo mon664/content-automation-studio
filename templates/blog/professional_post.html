@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{title}}</title>
+    <meta name="description" content="{{meta_description}}">
+    <meta name="keywords" content="{{meta_keywords}}">
+    <meta name="author" content="{{author}}">
+
+    <!-- Open Graph Meta Tags -->
+    <meta property="og:title" content="{{title}}">
+    <meta property="og:description" content="{{meta_description}}">
+    <meta property="og:image" content="{{featured_image}}">
+    <meta property="og:url" content="{{post_url}}">
+    <meta property="og:type" content="article">
+
+    <!-- Twitter Card Meta Tags -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="{{title}}">
+    <meta name="twitter:description" content="{{meta_description}}">
+    <meta name="twitter:image" content="{{featured_image}}">
+
+    <style>
+        /* Professional Blog Styles */
+        body {
+            font-family: 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+            line-height: 1.8;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #fff;
+        }
+
+        .post-header {
+            text-align: center;
+            margin-bottom: 40px;
+            border-bottom: 3px solid #f0f0f0;
+            padding-bottom: 30px;
+        }
+
+        .post-title {
+            font-size: 2.5em;
+            font-weight: 700;
+            color: #2c3e50;
+            margin-bottom: 15px;
+            line-height: 1.3;
+        }
+
+        .post-meta {
+            color: #7f8c8d;
+            font-size: 0.9em;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .post-meta span {
+            background: #f8f9fa;
+            padding: 5px 12px;
+            border-radius: 20px;
+        }
+
+        .featured-image {
+            width: 100%;
+            max-width: 100%;
+            height: auto;
+            border-radius: 12px;
+            margin: 30px 0;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        }
+
+        .post-content {
+            font-size: 1.1em;
+            line-height: 1.9;
+        }
+
+        .post-content h1, .post-content h2, .post-content h3 {
+            color: #2c3e50;
+            margin-top: 40px;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+
+        .post-content h1 { font-size: 2em; border-left: 5px solid #3498db; padding-left: 15px; }
+        .post-content h2 { font-size: 1.7em; border-left: 4px solid #e74c3c; padding-left: 12px; }
+        .post-content h3 { font-size: 1.4em; border-left: 3px solid #f39c12; padding-left: 10px; }
+
+        .post-content p {
+            margin-bottom: 25px;
+            text-align: justify;
+        }
+
+        .post-content ul, .post-content ol {
+            margin: 20px 0;
+            padding-left: 30px;
+        }
+
+        .post-content li {
+            margin-bottom: 10px;
+            padding-left: 10px;
+        }
+
+        .post-content blockquote {
+            background: #f8f9fa;
+            border-left: 5px solid #3498db;
+            margin: 30px 0;
+            padding: 20px;
+            font-style: italic;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .highlight-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 12px;
+            margin: 30px 0;
+        }
+
+        .info-box {
+            background: #e3f2fd;
+            border-left: 5px solid #2196f3;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .warning-box {
+            background: #fff3e0;
+            border-left: 5px solid #ff9800;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .post-tags {
+            margin-top: 40px;
+            text-align: center;
+            padding-top: 30px;
+            border-top: 2px solid #f0f0f0;
+        }
+
+        .tag {
+            display: inline-block;
+            background: #e1f5fe;
+            color: #0277bd;
+            padding: 6px 15px;
+            margin: 3px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
+        .tag:hover {
+            background: #0277bd;
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        .cta-button {
+            display: inline-block;
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+            color: white;
+            padding: 15px 30px;
+            text-decoration: none;
+            border-radius: 30px;
+            font-weight: 600;
+            margin: 20px 0;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(238, 90, 36, 0.3);
+        }
+
+        .cta-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(238, 90, 36, 0.4);
+        }
+
+        .author-box {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 12px;
+            margin-top: 40px;
+            text-align: center;
+            border: 2px dashed #dee2e6;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 15px;
+            }
+
+            .post-title {
+                font-size: 2em;
+            }
+
+            .post-meta {
+                flex-direction: column;
+                gap: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <article class="post">
+        <header class="post-header">
+            <h1 class="post-title">{{title}}</h1>
+            <div class="post-meta">
+                <span>📅 {{publish_date}}</span>
+                <span>✍️ {{author}}</span>
+                <span>⏱️ 읽는 시간: {{reading_time}}분</span>
+                <span>📊 조회수: {{view_count}}</span>
+            </div>
+        </header>
+
+        {% if featured_image %}
+        <img src="{{featured_image}}" alt="{{title}}" class="featured-image">
+        {% endif %}
+
+        <div class="post-content">
+            {{content}}
+        </div>
+
+        {% if tags %}
+        <div class="post-tags">
+            <h3>관련 태그</h3>
+            {% for tag in tags %}
+            <a href="/tag/{{tag}}" class="tag">#{{tag}}</a>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {% if author_bio %}
+        <div class="author-box">
+            <h3>작성자 소개</h3>
+            <p>{{author_bio}}</p>
+        </div>
+        {% endif %}
+    </article>
+
+    <!-- 구조화된 데이터 -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "BlogPosting",
+        "headline": "{{title}}",
+        "description": "{{meta_description}}",
+        "image": "{{featured_image}}",
+        "author": {
+            "@type": "Person",
+            "name": "{{author}}"
+        },
+        "publisher": {
+            "@type": "Organization",
+            "name": "{{blog_name}}"
+        },
+        "datePublished": "{{publish_date}}",
+        "dateModified": "{{modified_date}}"
+    }
+    </script>
+</body>
+</html>

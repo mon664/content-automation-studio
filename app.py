@@ -1,14 +1,29 @@
+# ⚠️ 이 프로젝트는 로컬 환경에서만 실행됩니다
+# ⚠️ This project runs in local environment only
+# Content Automation Studio - Local Development Mode
+
 from flask import Flask, request, jsonify, render_template
 import os
 from datetime import datetime
 import urllib.parse
 
+# 로컬 환경 전용 Flask 앱 설정
 app = Flask(__name__,
            static_folder='static',
            static_url_path='/static',
            template_folder='templates')
 
-app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key')
+# 로컬 개발 환경용 설정
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'local-development-secret-key')
+app.config['DEBUG'] = True
+app.config['ENV'] = 'development'
+
+# 강제 로컬 모드 설정
+app.config['LOCAL_MODE_ONLY'] = True
+
+# 서버 설정 (로컬 전용)
+HOST = os.getenv('HOST', '0.0.0.0')
+PORT = int(os.getenv('PORT', 5000))
 
 @app.after_request
 def add_cors_headers(response):
@@ -144,12 +159,28 @@ def image_generate_options():
     return '', 200
 
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
+    # 로컬 환경 전용 설정
+    port = int(os.getenv('PORT', 5000))
+    host = os.getenv('HOST', '0.0.0.0')
+    debug = os.getenv('DEBUG', 'True').lower() == 'true'
 
-    print("🚀 Content Automation Studio v3.0 (Clean)")
-    print("📡 Starting API server...")
-    print("✅ Routes registered:")
+    print("🚀 Content Automation Studio - 로컬 실행 환경")
+    print("⚠️  Railway 클라우드 배포 중단 - 로컬 GPU 자원 활용")
+    print("💻 시스템: 로컬 개발 모드")
+    print(f"🌐 서버 주소: http://localhost:{port}")
+    print(f"🎯 GPU 가속: {os.getenv('ENABLE_GPU_ACCELERATION', 'True')}")
+    print("🤖 AI 엔진: 로컬 Ollama (Gemma 3)")
+    print("📡 Starting local server...")
+    print("✅ Available routes:")
     for rule in app.url_map.iter_rules():
-        print(f"  {rule.methods} {rule.rule}")
+        if 'GET' in rule.methods and not rule.rule.startswith('/static'):
+            print(f"  📄 http://localhost:{port}{rule.rule}")
 
-    app.run(host='0.0.0.0', port=port, debug=False)
+    print("\n🎮 실행 방법:")
+    print("  Windows: run_studio.bat")
+    print("  Linux/Mac: ./run_studio.sh")
+    print("  수동: python app.py")
+    print("\n🛑 종료: Ctrl+C")
+
+    # 로컬 서버 실행
+    app.run(host=host, port=port, debug=debug)

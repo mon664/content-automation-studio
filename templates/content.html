@@ -804,7 +804,7 @@
                 <div class="content-preview">
                     <h4>✍️ AI 생성 콘텐츠 편집</h4>
                     <div class="editor-actions" style="margin-bottom: 15px;">
-                        <button class="action-btn btn-preview" onclick="openEditor('${result.title.replace(/`/g, '\\`')}', '${result.content.replace(/`/g, '\\`')}', '${result.metadata ? JSON.stringify(result.metadata).replace(/"/g, '\\"') : '{}')')">
+                        <button class="action-btn btn-preview" onclick="openEditor('${result.title.replace(/'/g, "\\'")}', '${result.content.replace(/'/g, "\\'")}', '${result.metadata ? JSON.stringify(result.metadata).replace(/"/g, '&quot;') : '{}}')">
                             <i class="fas fa-edit"></i> 편집기 열기
                         </button>
                         <button class="action-btn btn-draft" onclick="copyToClipboard('${result.content.replace(/'/g, "\\'")}')">

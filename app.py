@@ -75,8 +75,8 @@ def health_check():
         'timestamp': datetime.now().isoformat()
     })
 
-# 모듈 임포트 (auth 제외)
-from modules import trends, content, video, publisher, storage, scheduler
+# 모듈 임포트
+from modules import auth, trends, content, video, publisher, storage, scheduler
 
 # Analytics 백엔드 임포트
 from backend.routes import analytics, editor, admin

@@ -65,10 +65,149 @@
                     <!-- 결과가 여기에 표시됩니다 -->
                 </div>
             </div>
+
+            <!-- 에디터 모달 -->
+            <div id="editor-modal" class="modal-overlay" style="display: none;">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <div class="modal-title-section">
+                            <h3 id="modal-title">AI 콘텐츠 에디터</h3>
+                            <div class="modal-actions">
+                                <button class="btn btn-secondary" onclick="editor.exportMarkdown()">
+                                    <i class="fas fa-file-export"></i> Markdown
+                                </button>
+                                <button class="btn btn-secondary" onclick="editor.exportHTML()">
+                                    <i class="fas fa-file-code"></i> HTML
+                                </button>
+                                <button class="btn btn-info" onclick="editor.loadDraft()">
+                                    <i class="fas fa-file-import"></i> 불러오기
+                                </button>
+                                <button class="btn btn-danger" onclick="closeEditorModal()">
+                                    <i class="fas fa-times"></i> 닫기
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-body">
+                        <div id="editor-container"></div>
+
+                        <!-- 생성된 이미지 목록 -->
+                        <div id="generated-images" style="display: none;">
+                            <h4><i class="fas fa-images"></i> 생성된 이미지 목록</h4>
+                            <div id="images-list" class="images-grid">
+                                <!-- 이미지들이 여기에 표시됩니다 -->
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <div class="footer-left">
+                            <button class="btn btn-secondary" onclick="editor.clearContent()">
+                                <i class="fas fa-trash"></i> 내용 지우기
+                            </button>
+                            <button class="btn btn-info" onclick="editor.saveDraft()">
+                                <i class="fas fa-save"></i> 임시 저장
+                            </button>
+                        </div>
+                        <div class="footer-right">
+                            <button class="btn btn-warning" onclick="editor.saveContent()">
+                                <i class="fas fa-check"></i> 저장
+                            </button>
+                            <button class="btn btn-primary" onclick="showPublishOptions()">
+                                <i class="fas fa-paper-plane"></i> 발행 옵션
+                            </button>
+                            <button class="btn btn-success" onclick="saveAndPublish()">
+                                <i class="fas fa-rocket"></i> 저장 후 즉시 발행
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 발행 옵션 모달 -->
+            <div id="publish-modal" class="modal-overlay" style="display: none;">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3><i class="fas fa-paper-plane"></i> 발행 옵션</h3>
+                    </div>
+                    <div class="modal-body">
+                        <div class="publish-options">
+                            <div class="form-section">
+                                <h4><i class="fas fa-globe"></i> 발행 플랫폼</h4>
+                                <div class="form-group">
+                                    <label>
+                                        <input type="checkbox" value="tistory" id="platform-tistory">
+                                        <i class="fas fa-blog"></i> Tistory
+                                    </label>
+                                    <label>
+                                        <input type="checkbox" value="blogger" id="platform-blogger">
+                                        <i class="fab fa-google"></i> Google Blogger
+                                    </label>
+                                    <label>
+                                        <input type="checkbox" value="naver" id="platform-naver">
+                                        <i class="fas fa-line"></i> Naver Blog
+                                    </label>
+                                    <label>
+                                        <input type="checkbox" value="wordpress" id="platform-wordpress">
+                                        <i class="fab fa-wordpress"></i> WordPress
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="form-section">
+                                <h4><i class="fas fa-clock"></i> 발행 시간</h4>
+                                <div class="form-group">
+                                    <label>
+                                        <input type="radio" name="publish-time" value="now" checked>
+                                        즉시 발행
+                                    </label>
+                                    <label>
+                                        <input type="radio" name="publish-time" value="scheduled">
+                                        예약 발행
+                                    </label>
+                                </div>
+                                <div id="schedule-options" style="display: none;">
+                                    <div class="form-group">
+                                        <label>예약 날짜 및 시간:</label>
+                                        <input type="datetime-local" id="schedule-datetime" class="form-control">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-section">
+                                <h4><i class="fas fa-tags"></i> SEO 설정</h4>
+                                <div class="form-group">
+                                    <label>태그 (쉼표로 구분):</label>
+                                    <input type="text" id="publish-tags" class="form-control" placeholder="AI, 블로그, 콘텐츠 마케팅">
+                                </div>
+                                <div class="form-group">
+                                    <label>메타 설명:</label>
+                                    <textarea id="publish-meta-description" class="form-control" rows="2" placeholder="검색 결과에 표시될 설명..."></textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <div class="footer-left">
+                            <button class="btn btn-secondary" onclick="closePublishModal()">
+                                <i class="fas fa-times"></i> 취소
+                            </button>
+                        </div>
+                        <div class="footer-right">
+                            <button class="btn btn-primary" onclick="publishContent()">
+                                <i class="fas fa-paper-plane"></i> 발행하기
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </main>
     </div>
 
     <script>
+        let editor = null;
+        let currentContent = null;
+        let generatedImages = [];
+
         // 간단한 콘텐츠 생성 함수
         document.getElementById('generate-btn').addEventListener('click', async function() {
             const topic = document.getElementById('topic').value;
@@ -85,8 +224,8 @@
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 생성 중...';
 
             try {
-                // 실제 API 호출
-                const response = await fetch('/api/content/generate-blog', {
+                // 향상된 API 호출 (스토리텔링 + 이미지 자동 삽입)
+                const response = await fetch('/api/content/generate-enhanced-blog', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -96,30 +235,58 @@
                         keywords: keywords ? keywords.split(',').map(k => k.trim()) : [],
                         tone: 'professional',
                         length: 'long',
-                        target_audience: 'general'
+                        target_audience: 'general',
+                        storytelling: true,
+                        auto_images: true
                     })
                 });
 
                 const data = await response.json();
 
                 if (data.success) {
-                    displayResults({
+                    // 생성된 이미지 정보 저장
+                    if (data.generated_images) {
+                        generatedImages = data.generated_images;
+                    }
+
+                    currentContent = {
                         title: data.title,
                         summary: data.seo_meta?.description || 'AI가 생성한 전문적인 콘텐츠입니다.',
                         content: data.content,
                         imageCount: data.image_count || 0,
-                        metadata: data.enhancement_info || {}
-                    });
+                        metadata: data.enhancement_info || {},
+                        images: data.generated_images || []
+                    };
+
+                    displayResults(currentContent);
                 } else {
-                    // API 실패 시 더미 데이터 fallback
+                    // API 실패 시 향상된 더미 데이터 fallback
                     console.warn('API call failed, using fallback data:', data.error || data.message);
                     const dummyResult = {
-                        title: `${topic}에 관한 가이드`,
-                        summary: `${keywords} 관련된 유용한 정보를 제공합니다.`,
-                        content: `# ${topic}에 관한 가이드\n\n## 개요\n${keywords}는 현대 비즈니스에 필수적인 요소입니다.\n\n## 주요 내용\n1. ${topic}의 기본 개념\n2. ${keywords} 활용 방법\n3. 실제 사례 분석\n\n## 결론\n이 가이드가 ${topic}을 이해하는 데 도움이 되기를 바랍니다.`,
-                        imageCount: 0,
-                        metadata: { fallback: true }
+                        title: `${topic}에 대한 모든 것: 전문가의 완벽 가이드`,
+                        summary: `${keywords}와 관련된 전문적인 인사이트와 실용적인 정보를 제공합니다.`,
+                        content: `# ${topic}에 대한 모든 것: 전문가의 완벽 가이드\n\n## 서론: 왜 ${topic}가 중요한가요?\n안녕하세요! 오늘은 많은 분들이 궁금해하는 ${topic}에 대해 깊이 있게 이야기해보려고 합니다. 최근 ${keywords}와 관련된 질문이 정말 많아졌는데요, 이런 관심은 ${topic}가 우리의 일상과 비즈니스에서 얼마나 중요한지를 보여주는 증거 같습니다.\n\n## 본론: ${topic}의 핵심 요소들\n\n### 1. ${topic}의 기본 개념 이해하기\n${topic}를 제대로 이해하기 위해서는 먼저 그 본질을 파악해야 합니다. ${keywords}와의 관계를 살펴보면, 이 둘은 서로를 보완하는 중요한 요소들이 됩니다.\n\n[이미지: ${topic}의 개념을 시각적으로 보여주는 다이어그램]\n\n### 2. 실전 활용 방법\n실제로 ${topic}를 활용하는 방법은 여러 가지가 있습니다. 첫째, ${keywords}를 통한 접근법이 있고, 둘째는 실제 사례를 통한 학습법이 있습니다.\n\n[이미지: ${topic} 실전 활용 사례]\n\n### 3. 전문가들의 노하우\n많은 전문가들이 ${topic}에 대한 자신의 경험을 공유하고 있습니다. 이들의 노하우는 우리에게 큰 도움이 될 수 있습니다.\n\n## 결론: ${topic}를 통해 얻는 가치\n오늘 우리는 ${topic}에 대해 자세히 알아보았습니다. ${keywords}를 중심으로 한 이번 가이드가 여러분의 이해에 도움이 되었기를 바랍니다.\n\n${topic}는 단순한 지식을 넘어, 우리의 삶과 비즈니스에 실질적인 가치를 제공하는 중요한 요소입니다. 이 가이드를 바탕으로 여러분만의 ${topic} 활용법을 찾아보시기 바랍니다.\n\n감사합니다!`,
+                        imageCount: 2,
+                        metadata: {
+                            fallback: true,
+                            ai_enhanced: true,
+                            word_count: 2000,
+                            estimated_reading_time: 8
+                        },
+                        images: [
+                            {
+                                prompt: `${topic}의 개념을 시각적으로 보여주는 전문적인 다이어그램`,
+                                url: `https://via.placeholder.com/600x400/4A90E2/FFFFFF?text=${encodeURIComponent(topic + ' 개념도')}`,
+                                placeholder: `[이미지: ${topic}의 개념을 시각적으로 보여주는 다이어그램]`
+                            },
+                            {
+                                prompt: `${topic} 실전 활용 사례를 보여주는 전문적인 이미지`,
+                                url: `https://via.placeholder.com/600x400/7B68EE/FFFFFF?text=${encodeURIComponent(topic + ' 활용 사례')}`,
+                                placeholder: `[이미지: ${topic} 실전 활용 사례]`
+                            }
+                        ]
                     };
+                    generatedImages = dummyResult.images;
                     displayResults(dummyResult);
                 }
             } catch (error) {
@@ -195,6 +362,246 @@
                 .replace(/$/, '</p>');
         }
 
+        function openEditor(title, content) {
+            document.getElementById('modal-title').textContent = title;
+            document.getElementById('editor-modal').style.display = 'flex';
+            document.body.classList.add('modal-open');
+
+            // 에디터 초기화
+            if (!editor) {
+                editor = new RichTextEditor('editor-container', {
+                    placeholder: '콘텐츠를 편집하세요...',
+                    height: '400px',
+                    autoSave: true
+                });
+            }
+
+            editor.setContent(content);
+
+            // 생성된 이미지 목록 표시
+            displayGeneratedImages();
+        }
+
+        function closeEditorModal() {
+            document.getElementById('editor-modal').style.display = 'none';
+            document.body.classList.remove('modal-open');
+        }
+
+        function displayGeneratedImages() {
+            const imagesContainer = document.getElementById('generated-images');
+            const imagesList = document.getElementById('images-list');
+
+            if (generatedImages && generatedImages.length > 0) {
+                imagesContainer.style.display = 'block';
+
+                imagesList.innerHTML = generatedImages.map((image, index) => `
+                    <div class="image-item" style="border: 1px solid #ddd; padding: 10px; margin: 5px; border-radius: 5px;">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <img src="${image.url}" alt="생성된 이미지 ${index + 1}"
+                                 style="width: 80px; height: 60px; object-fit: cover; border-radius: 3px;">
+                            <div style="flex: 1;">
+                                <div style="font-size: 0.9em; font-weight: bold;">이미지 ${index + 1}</div>
+                                <div style="font-size: 0.8em; color: #666; margin-top: 3px;">${image.prompt}</div>
+                            </div>
+                            <button class="btn btn-secondary" onclick="regenerateImage(${index})"
+                                    style="padding: 5px 10px; font-size: 0.9em;">
+                                <i class="fas fa-sync"></i> 🔄 재생성
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                imagesContainer.style.display = 'none';
+            }
+        }
+
+        async function regenerateImage(index) {
+            const image = generatedImages[index];
+            if (!image) return;
+
+            const imageItem = document.querySelectorAll('.image-item')[index];
+            const originalContent = imageItem.innerHTML;
+
+            // 로딩 상태 표시
+            imageItem.innerHTML = `
+                <div style="text-align: center; padding: 20px;">
+                    <i class="fas fa-spinner fa-spin"></i> 이미지 재생성 중...
+                </div>
+            `;
+
+            try {
+                const response = await fetch('/api/content/regenerate-image', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        prompt: image.prompt,
+                        index: index
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    // 이미지 URL 업데이트
+                    generatedImages[index].url = data.new_image_url;
+
+                    // 에디터 내의 이미지 URL도 업데이트
+                    if (editor) {
+                        let editorContent = editor.getContent();
+                        // 이전 이미지 URL을 새 URL로 교체
+                        editorContent = editorContent.replace(image.url, data.new_image_url);
+                        editor.setContent(editorContent);
+                    }
+
+                    showToast(`이미지 ${index + 1}가 재생성되었습니다.`, 'success');
+                } else {
+                    throw new Error(data.error || '이미지 재생성 실패');
+                }
+            } catch (error) {
+                console.error('Image regeneration error:', error);
+                showToast('이미지 재생성에 실패했습니다.', 'error');
+                // 원래 내용 복원
+                imageItem.innerHTML = originalContent;
+            }
+
+            // 이미지 목록 새로고침
+            displayGeneratedImages();
+        }
+
+        function showPublishOptions() {
+            if (!currentContent) {
+                alert('발행할 콘텐츠가 없습니다.');
+                return;
+            }
+
+            // 현재 콘텐츠 정보로 발행 폼 채우기
+            document.getElementById('publish-tags').value =
+                currentContent.title.split(' ').slice(0, 5).join(', ');
+            document.getElementById('publish-meta-description').value = currentContent.summary;
+
+            document.getElementById('publish-modal').style.display = 'flex';
+            document.body.classList.add('modal-open');
+        }
+
+        function closePublishModal() {
+            document.getElementById('publish-modal').style.display = 'none';
+            document.body.classList.remove('modal-open');
+        }
+
+        async function saveContent() {
+            if (!editor) return;
+
+            try {
+                const content = editor.getContent();
+                const response = await fetch('/api/content/save', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        title: currentContent.title,
+                        content: content,
+                        metadata: currentContent.metadata,
+                        images: generatedImages
+                    })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    showToast('콘텐츠가 저장되었습니다.', 'success');
+                } else {
+                    throw new Error(data.error || '저장 실패');
+                }
+            } catch (error) {
+                console.error('Save error:', error);
+                showToast('콘텐츠 저장에 실패했습니다.', 'error');
+            }
+        }
+
+        async function saveAndPublish() {
+            // 먼저 저장
+            await saveContent();
+
+            // 발행 옵션 보여주기
+            showPublishOptions();
+        }
+
+        async function publishContent() {
+            try {
+                // 선택된 플랫폼 확인
+                const platforms = [];
+                ['tistory', 'blogger', 'naver', 'wordpress'].forEach(platform => {
+                    if (document.getElementById(`platform-${platform}`).checked) {
+                        platforms.push(platform);
+                    }
+                });
+
+                if (platforms.length === 0) {
+                    alert('최소 하나 이상의 발행 플랫폼을 선택해주세요.');
+                    return;
+                }
+
+                const publishTime = document.querySelector('input[name="publish-time"]:checked').value;
+                const scheduleDateTime = publishTime === 'scheduled'
+                    ? document.getElementById('schedule-datetime').value
+                    : null;
+
+                const publishData = {
+                    title: currentContent.title,
+                    content: editor ? editor.getContent() : currentContent.content,
+                    platforms: platforms,
+                    tags: document.getElementById('publish-tags').value,
+                    meta_description: document.getElementById('publish-meta-description').value,
+                    publish_immediately: publishTime === 'now',
+                    schedule_datetime: scheduleDateTime,
+                    images: generatedImages
+                };
+
+                const response = await fetch('/api/publisher/publish-multiple', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(publishData)
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    const platformNames = platforms.map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(', ');
+                    if (publishTime === 'now') {
+                        showToast(`${platformNames}에 즉시 발행되었습니다.`, 'success');
+                    } else {
+                        showToast(`${platformNames}에 예약 발행되었습니다.`, 'success');
+                    }
+                    closePublishModal();
+                } else {
+                    throw new Error(data.error || '발행 실패');
+                }
+            } catch (error) {
+                console.error('Publish error:', error);
+                showToast('발행에 실패했습니다: ' + error.message, 'error');
+            }
+        }
+
+        // 예약 발행 옵션 토글
+        document.addEventListener('change', function(e) {
+            if (e.target.name === 'publish-time') {
+                const scheduleOptions = document.getElementById('schedule-options');
+                if (e.target.value === 'scheduled') {
+                    scheduleOptions.style.display = 'block';
+                    // 최소 예약 시간을 현재 시간으로부터 1시간 후로 설정
+                    const minDate = new Date();
+                    minDate.setHours(minDate.getHours() + 1);
+                    document.getElementById('schedule-datetime').min = minDate.toISOString().slice(0, 16);
+                } else {
+                    scheduleOptions.style.display = 'none';
+                }
+            }
+        });
+
         function downloadMarkdown(filename, content) {
             const blob = new Blob([content], { type: 'text/markdown' });
             const url = window.URL.createObjectURL(blob);
@@ -224,6 +631,14 @@
                 toast.remove();
             }, 3000);
         }
+
+        // ESC 키로 모달 닫기
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeEditorModal();
+                closePublishModal();
+            }
+        });
     </script>
 </body>
 </html>

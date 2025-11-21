@@ -336,4 +336,12 @@ def after_request(response):
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
+
+    # 디버깅: 모든 등록된 라우트 출력
+    print("🔍 DEBUG: Registered Routes:")
+    for rule in app.url_map.iter_rules():
+        print(f"  {rule.methods} {rule.rule} -> {rule.endpoint}")
+
+    print(f"\n🚀 Starting Flask app on port {port}")
+    print(f"🌐 App will be available at: http://0.0.0.0:{port}")
     app.run(debug=False, host='0.0.0.0', port=port)

@@ -147,14 +147,16 @@ def after_request(response):
     response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
     response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
 
-    # CSP 헤더 추가 (GitHub 폰트 허용)
+    # CSP 헤더 추가 (GitHub 및 Google 번역 허용)
     csp = (
         "default-src 'self'; "
-        "font-src 'self' github.githubassets.com data:; "
-        "style-src 'self' 'unsafe-inline' github.githubassets.com; "
-        "script-src 'self' 'unsafe-inline'; "
-        "img-src 'self' data: https:; "
-        "connect-src 'self' https://api.github.com;"
+        "font-src 'self' github.githubassets.com data: fonts.gstatic.com; "
+        "style-src 'self' 'unsafe-inline' github.githubassets.com translate.googleapis.com; "
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval'; "
+        "img-src 'self' data: https: github.githubassets.com; "
+        "connect-src 'self' https://api.github.com https://collector.github.com https://www.gstatic.com; "
+        "child-src 'self' https://translate.google.com; "
+        "frame-src 'self' https://translate.google.com;"
     )
     response.headers['Content-Security-Policy'] = csp
 

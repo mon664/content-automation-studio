@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template_string
 from flask_cors import CORS
 import os
 from datetime import datetime
@@ -20,7 +20,7 @@ os.environ.update({
 # 기본 라우트
 @app.route('/')
 def index():
-    return '''
+    return render_template_string('''
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -162,11 +162,11 @@ def index():
     </script>
 </body>
 </html>
-    '''
+    '''))
 
 @app.route('/dashboard')
 def dashboard():
-    return '''
+    return render_template_string('''
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -302,11 +302,11 @@ def dashboard():
     </script>
 </body>
 </html>
-    '''
+    '''))
 
 @app.route('/trends')
 def trends_page():
-    return '''
+    return render_template_string('''
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -393,11 +393,11 @@ def trends_page():
     </script>
 </body>
 </html>
-    '''
+    ''')
 
 @app.route('/content')
 def content_page():
-    return '''
+    return render_template_string('''
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -485,7 +485,7 @@ def content_page():
     </script>
 </body>
 </html>
-    '''
+    ''')
 
 @app.route('/api/health')
 def health_check():

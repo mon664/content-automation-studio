@@ -81,9 +81,9 @@ from modules import trends, content, video, publisher, storage, scheduler
 # Analytics 백엔드 임포트
 from backend.routes import analytics, editor, admin
 
-# GitHub OAuth 초기화 - 임시로 비활성화
-# github_oauth = auth.init_oauth(app)
-# app.register_blueprint(auth.auth_bp)            # GitHub OAuth 인증 API 활성화
+# GitHub OAuth 초기화
+github_oauth = auth.init_oauth(app)
+app.register_blueprint(auth.auth_bp)            # GitHub OAuth 인증 API 활성화
 
 # 블루프린트 등록
 app.register_blueprint(trends.trends_bp, url_prefix='/api/trends')

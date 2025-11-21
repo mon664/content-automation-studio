@@ -13,11 +13,17 @@ try:
     from utils.prompts import generate_blog_prompt
     from utils.webdav import webdav_manager
     from utils.vertex_ai import image_generator
+    from utils.db_models import User as DBUser, Content as DBContent, AnalyticsData, Image, db_manager
 except ImportError:
     # Fallback if modules not available
     generate_blog_prompt = None
     webdav_manager = None
     image_generator = None
+    DBUser = None
+    DBContent = None
+    AnalyticsData = None
+    Image = None
+    db_manager = None
     print("Warning: Utils modules not available, using fallback functionality")
 
 content_bp = Blueprint('content', __name__)

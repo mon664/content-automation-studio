@@ -2,7 +2,12 @@ from flask import Blueprint, request, jsonify, redirect, url_for, session, flash
 from authlib.integrations.flask_client import OAuth
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 import os
+import sys
 import logging
+
+# 데이터베이스 모델 임포트
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'backend'))
+from utils.db_models import User as DBUser, db_manager
 
 # 로거 설정
 logger = logging.getLogger(__name__)
@@ -21,8 +26,12 @@ login_manager.login_message = '로그인이 필요합니다.'
 class User(UserMixin):
     """GitHub OAuth 사용자 모델"""
 
-    def __init__(self, user_data):
+    def __init__(self, user_data, db_user_id=None):
+        # Flask-Login용 ID
         self.id = str(user_data['id'])
+
+        # GitHub 정보
+        self.github_id = str(user_data['id'])
         self.username = user_data['login']
         self.name = user_data.get('name', user_data['login'])
         self.email = user_data.get('email', '')
@@ -35,6 +44,50 @@ class User(UserMixin):
         self.followers = user_data.get('followers', 0)
         self.following = user_data.get('following', 0)
         self.created_at = user_data.get('created_at', '')
+
+        # 데이터베이스 ID
+        self.db_user_id = db_user_id
+
+    def save_to_database(self):
+        """데이터베이스에 사용자 정보 저장"""
+        try:
+            db_user = DBUser(
+                github_id=self.github_id,
+                username=self.username,
+                email=self.email if self.email else f"{self.username}@github.local",
+                avatar_url=self.avatar_url,
+                name=self.name,
+                webdav_config={}  # 기본 WebDAV 설정
+            )
+            self.db_user_id = db_user.save_to_db(db_manager)
+            return self.db_user_id
+        except Exception as e:
+            logger.error(f"Failed to save user to database: {e}")
+            return None
+
+    def get_db_user_id(self):
+        """데이터베이스 사용자 ID 반환"""
+        if not self.db_user_id:
+            # 데이터베이스에서 조회
+            db_user = DBUser.get_by_github_id(db_manager, self.github_id)
+            if db_user:
+                self.db_user_id = db_user.id
+        return self.db_user_id
+
+    @classmethod
+    def from_database(cls, github_id):
+        """데이터베이스에서 사용자 정보로 객체 생성"""
+        db_user = DBUser.get_by_github_id(db_manager, github_id)
+        if db_user:
+            user_data = {
+                'id': db_user.github_id,
+                'login': db_user.username,
+                'name': db_user.name,
+                'email': db_user.email,
+                'avatar_url': db_user.avatar_url
+            }
+            return cls(user_data, db_user.id)
+        return None
 
     def to_dict(self):
         """사용자 정보를 딕셔너리로 변환"""
@@ -118,11 +171,14 @@ def init_oauth(app):
             session['user_data'] = user_data
             session['access_token'] = token
 
-            # User 객체 생성 및 로그인
+            # User 객체 생성 및 데이터베이스 저장
             user = User(user_data)
+            user.save_to_database()  # 데이터베이스에 저장
+
+            # Flask-Login으로 로그인
             login_user(user)
 
-            logger.info(f"User logged in: {user.username}")
+            logger.info(f"User logged in and saved to database: {user.username}")
 
             # 로그인 후 메인 페이지로 리디렉션
             return redirect(url_for('index'))

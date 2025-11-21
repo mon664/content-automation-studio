@@ -50,6 +50,9 @@ def health_check():
     })
 
 # 모듈 임포트
+from modules import trends, content, video, publisher, storage
+
+# 블루프린트 등록
 app.register_blueprint(trends.trends_bp, url_prefix='/api/trends')
 app.register_blueprint(content.content_bp, url_prefix='/api/content')
 app.register_blueprint(video.video_bp, url_prefix='/api/video')

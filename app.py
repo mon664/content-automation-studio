@@ -1,13 +1,20 @@
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, jsonify, render_template, session, flash
 from flask_cors import CORS
+from flask_login import current_user
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 
 app = Flask(__name__,
            static_folder='static',
            static_url_path='/static',
            template_folder='templates')
 CORS(app)
+
+# 세션 설정 (보안 강화)
+app.secret_key = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
+app.config['SESSION_TYPE'] = 'filesystem'
+app.config['SESSION_PERMANENT'] = False
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7)  # 7일간 세션 유지
 
 # 환경 변수 설정
 os.environ.update({
@@ -17,7 +24,11 @@ os.environ.update({
     'VERTEX_AI_API_KEY': 'AQ.Ab8RN6LuBT_emr293bsy-BBxgLc9l9TOnYCz73uoc-uA1aBp4A',
     'WEBDAV_URL': 'https://rausu.infini-cloud.net/dav',
     'WEBDAV_USERNAME': 'hhtsta',
-    'WEBDAV_PASSWORD': 'RXYf3uYhCbL9Ezwa'
+    'WEBDAV_PASSWORD': 'RXYf3uYhCbL9Ezwa',
+    # GitHub OAuth 설정
+    'GITHUB_CLIENT_ID': 'Iv23li5pLWW7i48nVhZt',  # GitHub OAuth App Client ID
+    'GITHUB_CLIENT_SECRET': 'a1c3de3c2f5b4e6d8a9b7c6e5f4d3c2b1a0e9f8d7c6b5a4f3e2d1c0b9a8f7e6d5c',  # GitHub OAuth App Client Secret
+    'SECRET_KEY': 'content-automation-studio-secret-key-hhtsta-6949689q'  # 세션 암호화 키
 })
 
 # 기본 라우트
@@ -26,7 +37,9 @@ def index():
     return render_template('index.html',
         version='2.0.0',
         status='running',
-        timestamp=datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        timestamp=datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+        current_user=current_user,
+        is_authenticated=current_user.is_authenticated if current_user else False
     )
 
 # API 라우트 (기존 기능 유지)
@@ -67,10 +80,13 @@ def health_check():
     })
 
 # 모듈 임포트
-from modules import trends, content, video, publisher, storage, scheduler
+from modules import trends, content, video, publisher, storage, scheduler, auth
 
 # Analytics 백엔드 임포트
 from backend.routes import analytics, editor
+
+# GitHub OAuth 초기화
+github_oauth = auth.init_oauth(app)
 
 # 블루프린트 등록
 app.register_blueprint(trends.trends_bp, url_prefix='/api/trends')
@@ -81,6 +97,7 @@ app.register_blueprint(storage.storage_bp, url_prefix='/api/storage')
 app.register_blueprint(scheduler.scheduler_bp, url_prefix='/api/scheduler')
 app.register_blueprint(analytics.analytics_bp)  # 성과 분석 API 활성화
 app.register_blueprint(editor.editor_bp)       # 에디터 전용 API 활성화
+app.register_blueprint(auth.auth_bp)            # GitHub OAuth 인증 API 활성화
 
 # 페이지 라우트
 @app.route('/trends')

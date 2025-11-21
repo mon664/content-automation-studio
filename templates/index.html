@@ -25,13 +25,29 @@
                 </div>
             </div>
             <div class="header-right">
-                <div class="user-menu">
-                    <button class="notification-btn">
-                        <i class="fas fa-bell"></i>
-                        <span class="notification-badge">3</span>
-                    </button>
-                    <div class="user-avatar">U</div>
-                </div>
+                {% if is_authenticated %}
+                    <!-- 로그인된 사용자 -->
+                    <div class="user-menu" style="display: flex; align-items: center; gap: 15px;">
+                        <button class="notification-btn">
+                            <i class="fas fa-bell"></i>
+                            <span class="notification-badge">3</span>
+                        </button>
+                        <img src="{{ current_user.avatar_url }}" alt="{{ current_user.name }}" class="user-avatar" style="width: 40px; height: 40px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.3);">
+                        <div class="user-info" style="text-align: right;">
+                            <div style="font-weight: 600; color: white; font-size: 14px;">{{ current_user.name or current_user.username }}</div>
+                            <div style="font-size: 12px; color: rgba(255,255,255,0.7);">@{{ current_user.username }}</div>
+                        </div>
+                        <a href="{{ url_for('auth.logout') }}" class="logout-btn" style="background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 8px 15px; border-radius: 8px; text-decoration: none; font-size: 14px; transition: all 0.3s ease;">
+                            <i class="fas fa-sign-out-alt"></i> 로그아웃
+                        </a>
+                    </div>
+                {% else %}
+                    <!-- 로그인되지 않은 사용자 -->
+                    <a href="{{ url_for('auth.login') }}" class="login-btn" style="background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: 600; display: flex; align-items: center; gap: 8px; transition: all 0.3s ease;">
+                        <i class="fab fa-github"></i>
+                        GitHub 로그인
+                    </a>
+                {% endif %}
             </div>
         </header>
 
@@ -143,6 +159,29 @@
                     <h2>Content Automation Studio</h2>
                     <p class="version">Version: {{ version or '2.0.0' }}</p>
                     <p class="status">{{ status or 'running' }}</p>
+
+                    {% if is_authenticated %}
+                        <!-- 로그인된 사용자 환영 메시지 -->
+                        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 12px; margin: 20px 0;">
+                            <div style="display: flex; align-items: center; justify-content: center; gap: 15px; flex-wrap: wrap;">
+                                <img src="{{ current_user.avatar_url }}" alt="{{ current_user.name }}" style="width: 60px; height: 60px; border-radius: 50%; border: 3px solid white;">
+                                <div style="text-align: left;">
+                                    <h3 style="margin: 0; font-size: 1.3rem;">환영합니다, {{ current_user.name or current_user.username }}님! 👋</h3>
+                                    <p style="margin: 5px 0 0 0; opacity: 0.9;">GitHub 계정으로 로그인되었습니다</p>
+                                    <p style="margin: 0; font-size: 0.9rem; opacity: 0.8;">@{{ current_user.username }} • {{ current_user.public_repos }}개의 공개 레포지토리</p>
+                                </div>
+                            </div>
+                        </div>
+                    {% else %}
+                        <!-- 로그인 유도 메시지 -->
+                        <div style="background: #f8f9fa; border: 2px dashed #dee2e6; padding: 20px; border-radius: 12px; margin: 20px 0;">
+                            <h3 style="margin: 0 0 10px 0; color: #2c3e50;">🔐 더 많은 기능을 사용해보세요!</h3>
+                            <p style="margin: 0; color: #7f8c8d;">GitHub 계정으로 로그인하여 개인화된 기능을 경험해보세요</p>
+                            <a href="{{ url_for('auth.login') }}" style="display: inline-block; margin-top: 15px; background: #3498db; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600;">
+                                <i class="fab fa-github"></i> 지금 로그인하기
+                            </a>
+                        </div>
+                    {% endif %}
 
                     <div class="features">
                         <h3>✨️ 전문 기능</h3>

@@ -4,6 +4,7 @@ import json
 import os
 import re
 import sys
+import urllib.parse
 from datetime import datetime
 
 # utils 디렉토리를 Python path에 추가
@@ -31,7 +32,7 @@ content_bp = Blueprint('content', __name__)
 # Gemini API 설정 (안전한 fallback 포함)
 try:
     genai.configure(api_key=os.getenv('GEMINI_API_KEY', 'AIzaSyBlxBK-1-vl-Uzy5Vys9tLPQynRhGk30UY'))
-    model = genai.GenerativeModel('gemini-pro')
+    model = genai.GenerativeModel('gemini-1.5-flash')
     GEMINI_AVAILABLE = True
 except Exception as e:
     print(f"Gemini API not available: {e}")
@@ -287,7 +288,7 @@ def regenerate_image():
         # 간단한 fallback 이미지 생성
         colors = ['4A90E2', '7B68EE', '50C878', 'FF6B6B', '4ECDC4', 'E74C3C', 'F39C12', '27AE60']
         color = colors[index % len(colors)]
-        fallback_url = f"https://via.placeholder.com/600x400/{color}/FFFFFF?text={encodeURIComponent('Regenerated: ' + prompt)}"
+        fallback_url = f"https://via.placeholder.com/600x400/{color}/FFFFFF?text={urllib.parse.quote('Regenerated: ' + prompt)}"
 
         return jsonify({
             'success': True,
@@ -465,7 +466,7 @@ def generate_enhanced_fallback_content(topic, keywords, tone, length, target_aud
     for i, prompt in enumerate(image_prompts):
         generated_images.append({
             'prompt': prompt,
-            'url': f"https://via.placeholder.com/600x400/{['4A90E2', '7B68EE'][i]}/FFFFFF?text={encodeURIComponent(prompt)}",
+            'url': f"https://via.placeholder.com/600x400/{['4A90E2', '7B68EE'][i]}/FFFFFF?text={urllib.parse.quote(prompt)}",
             'placeholder': f"[이미지: {prompt}]"
         })
 

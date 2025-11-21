@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 try:
     import google.generativeai as genai
     genai.configure(api_key=os.getenv('GEMINI_API_KEY', 'AIzaSyBlxBK-1-vl-Uzy5Vys9tLPQynRhGk30UY'))
-    model = genai.GenerativeModel('gemini-pro')
+    model = genai.GenerativeModel('gemini-1.5-flash')
     GEMINI_AVAILABLE = True
     logger.info("Gemini API initialized successfully")
 except ImportError as e:

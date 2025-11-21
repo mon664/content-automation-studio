@@ -175,3 +175,76 @@ window.addEventListener('offline', function() {
     console.log('Network connection lost');
     showTooltip(document.body, '네트워크 연결이 끊겼습니다.');
 });
+
+// GitHub 로그인 기능
+function handleGitHubLogin() {
+    window.location.href = '/auth/login';
+}
+
+function handleLogout() {
+    if (confirm('정말 로그아웃하시겠습니까?')) {
+        window.location.href = '/auth/logout';
+    }
+}
+
+// 사용자 인증 상태 확인
+async function checkAuthStatus() {
+    try {
+        const response = await fetch('/auth/status');
+        const data = await response.json();
+
+        if (data.authenticated && data.user) {
+            showUserProfile(data.user);
+        } else {
+            showLoginButton();
+        }
+    } catch (error) {
+        console.error('Auth status check failed:', error);
+        showLoginButton();
+    }
+}
+
+// 사용자 프로필 표시
+function showUserProfile(user) {
+    const loginBtn = document.getElementById('github-login-btn');
+    const userProfile = document.getElementById('user-profile');
+    const userAvatar = document.getElementById('user-avatar');
+    const userName = document.getElementById('user-name');
+
+    if (loginBtn) loginBtn.style.display = 'none';
+    if (userProfile) {
+        userProfile.style.display = 'flex';
+        if (userAvatar) userAvatar.src = user.avatar_url || '/static/img/default-avatar.png';
+        if (userName) userName.textContent = user.name || user.username;
+    }
+
+    console.log(`User logged in: ${user.name || user.username}`);
+}
+
+// 로그인 버튼 표시
+function showLoginButton() {
+    const loginBtn = document.getElementById('github-login-btn');
+    const userProfile = document.getElementById('user-profile');
+
+    if (loginBtn) loginBtn.style.display = 'flex';
+    if (userProfile) userProfile.style.display = 'none';
+}
+
+// 페이지 로드 시 인증 상태 확인
+document.addEventListener('DOMContentLoaded', function() {
+    // 기존 코드 유지...
+    console.log('Content Automation Studio v2.0.0');
+
+    // API 상태 자동 새로고침
+    setupAutoRefresh();
+
+    // 현재 시간 표시
+    updateCurrentTime();
+    setInterval(updateCurrentTime, 1000);
+
+    // 애니메이션 효과 추가
+    addAnimations();
+
+    // 인증 상태 확인
+    checkAuthStatus();
+});

@@ -12,6 +12,16 @@ CORS(app)
 # 기본 보안 설정
 app.secret_key = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
 
+# 관리자 목록 (GitHub ID)
+ADMIN_USERS = [
+    'mon664',  # 당신의 GitHub 아이디
+    # 추가 관리자 여기에 추가
+]
+
+def is_admin_user(github_username):
+    """관리자인지 확인"""
+    return github_username in ADMIN_USERS
+
 # 환경 변수 설정
 os.environ.update({
     'GOOGLE_PROJECT_ID': 'content-automation-studio',

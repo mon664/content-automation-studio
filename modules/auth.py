@@ -213,7 +213,7 @@ def init_oauth(app):
             'is_authenticated': True
         })
 
-    @auth_bp.route('/check')
+    @auth_bp.route('/status')
     def check_auth():
         """인증 상태 확인"""
         if current_user.is_authenticated:

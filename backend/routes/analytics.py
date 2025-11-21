@@ -98,7 +98,7 @@ def get_content_performance():
             return error_response("유효하지 않은 콘텐츠 타입입니다", 400)
 
         if limit < 1 or limit > 100:
-            return error_response "조회 개수는 1에서 100 사이여야 합니다", 400)
+            return error_response("조회 개수는 1에서 100 사이여야 합니다", 400)
 
         performance_data = analytics_service.get_content_performance(
             content_type=content_type,

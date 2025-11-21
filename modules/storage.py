@@ -1,11 +1,18 @@
 from flask import Blueprint, request, jsonify
-import webdavclient
 import requests
 import os
 import tempfile
 import uuid
 from datetime import datetime
 from werkzeug.utils import secure_filename
+
+# WebDAV 클라이언트 임포트 (의존성 문제 방지)
+try:
+    import webdavclient
+    WEBDAV_AVAILABLE = True
+except ImportError:
+    WEBDAV_AVAILABLE = False
+    print("Warning: webdavclient not available. Storage features will be disabled.")
 
 storage_bp = Blueprint('storage', __name__)
 
@@ -23,6 +30,10 @@ class WebDAVManager:
 
     def connect(self):
         """WebDAV 연결"""
+        if not WEBDAV_AVAILABLE:
+            print("WebDAV client not available")
+            return False
+
         try:
             self.client = webdavclient.Client(
                 url=self.webdav_url,
@@ -36,6 +47,9 @@ class WebDAVManager:
 
     def upload_file(self, local_path, remote_path=None, folder_type='uploads'):
         """파일 업로드"""
+        if not WEBDAV_AVAILABLE:
+            return {'success': False, 'error': 'WebDAV not available'}
+
         try:
             if not self.client:
                 self.connect()

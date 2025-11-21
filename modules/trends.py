@@ -2,28 +2,48 @@ from flask import Blueprint, request, jsonify
 import requests
 import json
 from datetime import datetime, timedelta
-import pytrends
-from pytrends.request import TrendReq
+# Google Trends API 임포트 (의존성 문제 방지)
+try:
+    import pytrends
+    from pytrends.request import TrendReq
+    PYTRENDS_AVAILABLE = True
+    pytrends = TrendReq(hl='ko-KR', tz=540)
+except ImportError:
+    PYTRENDS_AVAILABLE = False
+    pytrends = None
+    print("Warning: pytrends not available. Using fallback data.")
 
 trends_bp = Blueprint('trends', __name__)
-
-# Google Trends API 클라이언트
-pytrends = TrendReq(hl='ko-KR', tz=540)
 
 @trends_bp.route('/analyze', methods=['POST'])
 def analyze_trends():
     """Google Trends 키워드 분석"""
-    data = request.get_json()
-
-    if not data or 'keyword' not in data:
-        return jsonify({'error': 'Keyword is required'}), 400
-
-    keyword = data['keyword']
-    timeframe = data.get('timeframe', 'today 3-m')
-    geo = data.get('geo', 'KR')
-
     try:
+        data = request.get_json()
+
+        if not data or 'keyword' not in data:
+            return jsonify({'error': 'Keyword is required'}), 400
+
+        keyword = data['keyword']
+        timeframe = data.get('timeframe', 'today 3-m')
+        geo = data.get('geo', 'KR')
+
         # Google Trends 데이터 가져오기
+        if not PYTRENDS_AVAILABLE:
+            # Fallback 데이터 사용
+            trends_data = generate_fallback_trends(keyword)
+            return jsonify({
+                'success': True,
+                'keyword': keyword,
+                'trends_data': trends_data,
+                'related_queries': ['AI 기술', '콘텐츠 마케팅', '디지털 트렌드'],
+                'regional_interest': [{'region': '서울', 'interest': 75}, {'region': '경기', 'interest': 65}],
+                'analysis': generate_trends_analysis(trends_data, keyword),
+                'recommendations': generate_content_recommendations(keyword, trends_data),
+                'timestamp': datetime.now().isoformat(),
+                'notice': '데모 데이터를 사용합니다.'
+            })
+
         trends_data = get_google_trends_data(keyword, timeframe, geo)
 
         # 관련 키워드 분석

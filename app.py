@@ -139,6 +139,26 @@ def analytics_page():
 def admin_page():
     return render_template('admin.html')
 
+@app.after_request
+def after_request(response):
+    """CORS 및 CSP 헤더 추가"""
+    response.headers.add('Access-Control-Allow-Origin', '*')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+    response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
+
+    # CSP 헤더 추가 (GitHub 폰트 허용)
+    csp = (
+        "default-src 'self'; "
+        "font-src 'self' github.githubassets.com data:; "
+        "style-src 'self' 'unsafe-inline' github.githubassets.com; "
+        "script-src 'self' 'unsafe-inline'; "
+        "img-src 'self' data: https:; "
+        "connect-src 'self' https://api.github.com;"
+    )
+    response.headers['Content-Security-Policy'] = csp
+
+    return response
+
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(debug=False, host='0.0.0.0', port=port)

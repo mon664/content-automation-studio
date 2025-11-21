@@ -423,6 +423,28 @@ class ToastEditor {
 // 전역 에디터 변수
 let editor = null;
 
+// 에디터 모달 닫기 함수
+function closeEditorModal() {
+    try {
+        // 에디터 파괴
+        if (editor) {
+            editor.destroy();
+            editor = null;
+        }
+
+        // body 클래스 제거
+        document.body.classList.remove('editor-modal-open');
+
+        // 모달 제거
+        const modal = document.querySelector('.editor-modal');
+        if (modal) {
+            modal.remove();
+        }
+    } catch (error) {
+        console.error('에디터 모달 닫기 오류:', error);
+    }
+}
+
 // openEditor 함수 수정 (전역)
 function openEditor(title, content, metadata) {
     try {
@@ -431,6 +453,9 @@ function openEditor(title, content, metadata) {
             editor.destroy();
             editor = null;
         }
+
+        // body에 클래스 추가하여 레이아웃 관리
+        document.body.classList.add('editor-modal-open');
 
         // 모달 생성
         const modal = document.createElement('div');
@@ -452,7 +477,7 @@ function openEditor(title, content, metadata) {
                 <h3 style="margin: 0; font-size: 1.5rem;">
                     <i class="fas fa-edit"></i> AI 콘텐츠 편집기
                 </h3>
-                <button onclick="this.closest('.modal').remove()" style="background: rgba(255,255,255,0.2); border: none; color: white; padding: 8px 15px; border-radius: 8px; cursor: pointer; font-size: 18px;">
+                <button onclick="closeEditorModal()" style="background: rgba(255,255,255,0.2); border: none; color: white; padding: 8px 15px; border-radius: 8px; cursor: pointer; font-size: 18px;">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
@@ -469,8 +494,17 @@ function openEditor(title, content, metadata) {
             </div>
         `;
 
-        modal.className = 'modal';
+        modal.className = 'editor-modal';
         document.body.appendChild(modal);
+
+        // ESC 키로 모달 닫기
+        const handleEscKey = (e) => {
+            if (e.key === 'Escape') {
+                closeEditorModal();
+                document.removeEventListener('keydown', handleEscKey);
+            }
+        };
+        document.addEventListener('keydown', handleEscKey);
 
         // Toast UI Editor 초기화
         setTimeout(() => {

@@ -6,6 +6,58 @@
     box-sizing: border-box;
 }
 
+/* 사이드바와 메인 콘텐츠 레이아웃 수정 */
+.sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 260px;
+    height: 100vh;
+    background: white;
+    z-index: 1000;
+    box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+}
+
+.main-content {
+    margin-left: 260px;
+    min-height: 100vh;
+    background: #f8f9fa;
+    z-index: 1;
+    position: relative;
+}
+
+/* 에디터 모달 스타일 수정 */
+.editor-modal {
+    z-index: 10000 !important;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    background: rgba(0,0,0,0.8) !important;
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+#toastEditorContainer {
+    position: relative !important;
+    z-index: 10001 !important;
+}
+
+/* Toast UI Editor 툴바 z-index */
+.toastui-editor-toolbar {
+    z-index: 10002 !important;
+}
+
+/* 모달이 닫힐 때 레이아웃 복원 */
+body.editor-modal-open .sidebar {
+    z-index: 999;
+}
+
+body.editor-modal-open .main-content {
+    z-index: 998;
+}
+
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);

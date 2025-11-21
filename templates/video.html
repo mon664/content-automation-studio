@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>영상 제작 - Content Automation Studio</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .video-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .video-form {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ecf0f1;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+            font-family: inherit;
+        }
+
+        .form-group textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+
+        .btn {
+            background: linear-gradient(45deg, #f39c12, #e67e22);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(243, 156, 18, 0.3);
+        }
+
+        .results {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+            display: none;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 50px;
+            display: none;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #f39c12;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-bottom: 20px;
+            color: #3498db;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .back-link:hover {
+            text-decoration: underline;
+        }
+
+        .tabs {
+            display: flex;
+            background: #ecf0f1;
+            border-radius: 10px;
+            padding: 5px;
+            margin-bottom: 20px;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 10px 20px;
+            background: transparent;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .tab.active {
+            background: white;
+            color: #f39c12;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .segment-preview {
+            background: #fff8dc;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            border-left: 4px solid #f39c12;
+        }
+
+        .video-preview {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="video-container">
+        <a href="/" class="back-link">
+            <i class="fas fa-arrow-left"></i> 홈으로 돌아가기
+        </a>
+
+        <h1><i class="fas fa-video"></i> 영상 자동 제작</h1>
+
+        <div class="tabs">
+            <button class="tab active" onclick="showTab('script')">
+                <i class="fas fa-file-alt"></i> 스크립트 생성
+            </button>
+            <button class="tab" onclick="showTab('audio')">
+                <i class="fas fa-microphone"></i> 음성 생성
+            </button>
+            <button class="tab" onclick="showTab('slideshow')">
+                <i class="fas fa-images"></i> 슬라이드쇼
+            </button>
+            <button class="tab" onclick="showTab('youtube')">
+                <i class="fab fa-youtube"></i> YouTube Shorts
+            </button>
+        </div>
+
+        <!-- 스크립트 생성 탭 -->
+        <div id="script-tab" class="tab-content active">
+            <div class="video-form">
+                <h3>영상 스크립트 생성</h3>
+                <form id="scriptForm">
+                    <div class="form-group">
+                        <label for="scriptContent">콘텐츠 내용</label>
+                        <textarea id="scriptContent" name="content" placeholder="영상으로 만들 콘텐츠를 입력하세요..." required></textarea>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="voiceSpeed">음성 속도</label>
+                            <select id="voiceSpeed" name="voice_speed">
+                                <option value="slow">느리게</option>
+                                <option value="normal" selected>보통</option>
+                                <option value="fast">빠르게</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="language">언어</label>
+                            <select id="language" name="language">
+                                <option value="ko" selected>한국어</option>
+                                <option value="en">영어</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn">
+                        <i class="fas fa-magic"></i> 스크립트 생성
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- 음성 생성 탭 -->
+        <div id="audio-tab" class="tab-content">
+            <div class="video-form">
+                <h3>TTS 음성 생성</h3>
+                <form id="audioForm">
+                    <div class="form-group">
+                        <label for="audioText">음성으로 변환할 텍스트</label>
+                        <textarea id="audioText" name="text" placeholder="음성으로 변환할 텍스트를 입력하세요..." required></textarea>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="audioLanguage">언어</label>
+                            <select id="audioLanguage" name="language">
+                                <option value="ko" selected>한국어</option>
+                                <option value="en">영어</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="slowSpeed">
+                                <input type="checkbox" id="slowSpeed" name="slow"> 느린 속도
+                            </label>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn">
+                        <i class="fas fa-microphone"></i> 음성 생성
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- 슬라이드쇼 탭 -->
+        <div id="slideshow-tab" class="tab-content">
+            <div class="video-form">
+                <h3>이미지 슬라이드쇼 생성</h3>
+                <form id="slideshowForm">
+                    <div class="form-group">
+                        <label for="slideContent">슬라이드 내용</label>
+                        <textarea id="slideContent" name="content" placeholder="슬라이드로 만들 콘텐츠를 입력하세요..." required></textarea>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="slideStyle">스타일</label>
+                            <select id="slideStyle" name="style">
+                                <option value="professional" selected>전문적</option>
+                                <option value="casual">캐주얼</option>
+                                <option value="cinematic">시네마틱</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="resolution">해상도</label>
+                            <select id="resolution" name="resolution">
+                                <option value="720p">720p</option>
+                                <option value="1080p" selected>1080p</option>
+                                <option value="4k">4K</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn">
+                        <i class="fas fa-images"></i> 슬라이드쇼 생성
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- YouTube Shorts 탭 -->
+        <div id="youtube-tab" class="tab-content">
+            <div class="video-form">
+                <h3>YouTube Shorts 영상 생성</h3>
+                <form id="youtubeForm">
+                    <div class="form-group">
+                        <label for="youtubeContent">쇼츠 내용</label>
+                        <textarea id="youtubeContent" name="content" placeholder="YouTube Shorts로 만들 콘텐츠를 입력하세요 (최대 59초)..." required></textarea>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="musicStyle">음악 스타일</label>
+                            <select id="musicStyle" name="music">
+                                <option value="trending" selected>트렌딩</option>
+                                <option value="corporate">기업용</option>
+                                <option value="cinematic">시네마틱</option>
+                                <option value="background">배경음악</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="durationLimit">최대 길이</label>
+                            <select id="durationLimit" name="duration_limit">
+                                <option value="30">30초</option>
+                                <option value="59" selected>59초</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn">
+                        <i class="fab fa-youtube"></i> YouTube Shorts 생성
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- 로딩 표시 -->
+        <div id="loading" class="loading">
+            <div class="spinner"></div>
+            <p>영상을 생성중입니다...</p>
+        </div>
+
+        <!-- 결과 표시 -->
+        <div id="results" class="results">
+            <h3>생성 결과</h3>
+            <div id="resultsContent"></div>
+        </div>
+    </div>
+
+    <script>
+        function showTab(tabName) {
+            // 모든 탭 숨기기
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+
+            // 선택된 탭 표시
+            document.getElementById(tabName + '-tab').classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        // 스크립트 생성 폼 제출
+        document.getElementById('scriptForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const formData = new FormData(e.target);
+            const data = {
+                content: formData.get('content'),
+                voice_speed: formData.get('voice_speed'),
+                language: formData.get('language')
+            };
+
+            showLoading();
+
+            try {
+                const response = await fetch('/api/video/generate-script', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showScriptResults(result);
+                } else {
+                    showError('생성에 실패했습니다: ' + result.error);
+                }
+            } catch (error) {
+                showError('오류가 발생했습니다: ' + error.message);
+            } finally {
+                hideLoading();
+            }
+        });
+
+        // 음성 생성 폼 제출
+        document.getElementById('audioForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const formData = new FormData(e.target);
+            const data = {
+                text: formData.get('text'),
+                language: formData.get('language'),
+                slow: formData.has('slow')
+            };
+
+            showLoading();
+
+            try {
+                const response = await fetch('/api/video/generate-audio', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showAudioResults(result);
+                } else {
+                    showError('생성에 실패했습니다: ' + result.error);
+                }
+            } catch (error) {
+                showError('오류가 발생했습니다: ' + error.message);
+            } finally {
+                hideLoading();
+            }
+        });
+
+        // 슬라이드쇼 생성 폼 제출
+        document.getElementById('slideshowForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const formData = new FormData(e.target);
+            const data = {
+                content: formData.get('content'),
+                style: formData.get('style'),
+                resolution: formData.get('resolution')
+            };
+
+            showLoading();
+
+            try {
+                const response = await fetch('/api/video/create-slideshow', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showSlideshowResults(result);
+                } else {
+                    showError('생성에 실패했습니다: ' + result.error);
+                }
+            } catch (error) {
+                showError('오류가 발생했습니다: ' + error.message);
+            } finally {
+                hideLoading();
+            }
+        });
+
+        // YouTube Shorts 생성 폼 제출
+        document.getElementById('youtubeForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const formData = new FormData(e.target);
+            const data = {
+                content: formData.get('content'),
+                music: formData.get('music'),
+                duration_limit: parseInt(formData.get('duration_limit'))
+            };
+
+            showLoading();
+
+            try {
+                const response = await fetch('/api/video/create-youtube-short', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showYoutubeResults(result);
+                } else {
+                    showError('생성에 실패했습니다: ' + result.error);
+                }
+            } catch (error) {
+                showError('오류가 발생했습니다: ' + error.message);
+            } finally {
+                hideLoading();
+            }
+        });
+
+        function showLoading() {
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('results').style.display = 'none';
+        }
+
+        function hideLoading() {
+            document.getElementById('loading').style.display = 'none';
+        }
+
+        function showScriptResults(result) {
+            const resultsContent = document.getElementById('resultsContent');
+
+            let html = `
+                <div class="script-results">
+                    <h4>📝 생성된 스크립트</h4>
+                    <p><strong>총 세그먼트:</strong> ${result.total_segments}</p>
+                    <p><strong>예상 총 재생 시간:</strong> ${result.total_duration.toFixed(1)}초</p>
+
+                    <div style="margin-top: 20px;">
+                        ${result.script_segments.map((segment, index) => `
+                            <div class="segment-preview">
+                                <strong>세그먼트 ${segment.segment_id}</strong>
+                                <span style="float: right; color: #666;">${segment.duration.toFixed(1)}초</span>
+                                <p style="margin: 10px 0 0 0;">${segment.text}</p>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+
+            resultsContent.innerHTML = html;
+            document.getElementById('results').style.display = 'block';
+        }
+
+        function showAudioResults(result) {
+            const resultsContent = document.getElementById('resultsContent');
+
+            const html = `
+                <div class="audio-results">
+                    <h4>🎵 생성된 음성</h4>
+                    <div class="video-preview">
+                        <audio controls style="width: 100%; max-width: 500px;">
+                            <source src="${result.audio_url}" type="audio/mpeg">
+                            브라우저가 오디오 재생을 지원하지 않습니다.
+                        </audio>
+                    </div>
+                    <div style="background: #f8f9fa; padding: 20px; border-radius: 10px; margin-top: 20px;">
+                        <p><strong>원본 텍스트:</strong> ${result.text}</p>
+                        <p><strong>언어:</strong> ${result.language}</p>
+                        <p><strong>재생 시간:</strong> ${result.duration.toFixed(1)}초</p>
+                        <p><strong>생성 시간:</strong> ${new Date(result.generated_at).toLocaleString('ko-KR')}</p>
+                    </div>
+                </div>
+            `;
+
+            resultsContent.innerHTML = html;
+            document.getElementById('results').style.display = 'block';
+        }
+
+        function showSlideshowResults(result) {
+            const resultsContent = document.getElementById('resultsContent');
+
+            const html = `
+                <div class="slideshow-results">
+                    <h4>🖼️ 생성된 슬라이드쇼</h4>
+                    <p><strong>슬라이드 수:</strong> ${result.slide_count}</p>
+                    <p><strong>해상도:</strong> ${result.resolution}</p>
+                    <p><strong>스타일:</strong> ${result.style}</p>
+
+                    <div style="margin-top: 20px;">
+                        <h5>슬라이드 이미지:</h5>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                            ${result.image_urls.map((url, index) => `
+                                <div style="text-align: center;">
+                                    <img src="${url}" alt="Slide ${index + 1}" style="width: 100%; border-radius: 8px; box-shadow: 0 3px 10px rgba(0,0,0,0.1);">
+                                    <p style="margin: 5px 0 0 0; font-size: 14px;">슬라이드 ${index + 1}</p>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            resultsContent.innerHTML = html;
+            document.getElementById('results').style.display = 'block';
+        }
+
+        function showYoutubeResults(result) {
+            const resultsContent = document.getElementById('resultsContent');
+
+            const html = `
+                <div class="youtube-results">
+                    <h4>🎬 YouTube Shorts 생성</h4>
+                    <p>${result.message}</p>
+                    <p><strong>슬라이드 수:</strong> ${result.slide_count}</p>
+                    <p><strong>최대 길이:</strong> ${result.duration_limit}초</p>
+                    <p><strong>음악 스타일:</strong> ${result.music_style}</p>
+
+                    ${result.image_urls && result.image_urls.length > 0 ? `
+                        <div style="margin-top: 20px;">
+                            <h5>생성된 슬라이드:</h5>
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px;">
+                                ${result.image_urls.map((url, index) => `
+                                    <div style="text-align: center;">
+                                        <img src="${url}" alt="Short Slide ${index + 1}" style="width: 100%; border-radius: 8px; aspect-ratio: 9/16; object-fit: cover;">
+                                        <p style="margin: 5px 0 0 0; font-size: 12px;">Slide ${index + 1}</p>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+
+            resultsContent.innerHTML = html;
+            document.getElementById('results').style.display = 'block';
+        }
+
+        function showError(message) {
+            const resultsContent = document.getElementById('resultsContent');
+            resultsContent.innerHTML = `
+                <div style="background: #ffe6e6; color: #d32f2f; padding: 20px; border-radius: 10px; border-left: 4px solid #d32f2f;">
+                    <strong>오류:</strong> ${message}
+                </div>
+            `;
+            document.getElementById('results').style.display = 'block';
+        }
+    </script>
+</body>
+</html>

@@ -28,25 +28,62 @@
         </div>
 
         <div style="margin-top: 30px;">
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin-top: 20px;">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin-top: 20px;">
+                <a href="/trends" style="text-decoration: none;">
+                    <div style="background: linear-gradient(135deg, #e74c3c, #c0392b); color: white; padding: 20px; border-radius: 15px; text-align: center; transition: all 0.3s; cursor: pointer;">
+                        <div style="font-size: 2rem; margin-bottom: 10px;">📊</div>
+                        <h3 style="margin: 0 0 5px 0;">Google Trends</h3>
+                        <p style="margin: 0; font-size: 0.9rem;">키워드 분석 및 트렌드 확인</p>
+                    </div>
+                </a>
+
+                <a href="/content" style="text-decoration: none;">
+                    <div style="background: linear-gradient(135deg, #27ae60, #229954); color: white; padding: 20px; border-radius: 15px; text-align: center; transition: all 0.3s; cursor: pointer;">
+                        <div style="font-size: 2rem; margin-bottom: 10px;">✍️</div>
+                        <h3 style="margin: 0 0 5px 0;">AI 콘텐츠 생성</h3>
+                        <p style="margin: 0; font-size: 0.9rem;">블로그, SNS, 이메일 자동 생성</p>
+                    </div>
+                </a>
+
+                <a href="/video" style="text-decoration: none;">
+                    <div style="background: linear-gradient(135deg, #f39c12, #e67e22); color: white; padding: 20px; border-radius: 15px; text-align: center; transition: all 0.3s; cursor: pointer;">
+                        <div style="font-size: 2rem; margin-bottom: 10px;">🎬</div>
+                        <h3 style="margin: 0 0 5px 0;">영상 제작</h3>
+                        <p style="margin: 0; font-size: 0.9rem;">TTS, 슬라이드쇼, 비디오 생성</p>
+                    </div>
+                </a>
+
+                <a href="/storage" style="text-decoration: none;">
+                    <div style="background: linear-gradient(135deg, #3498db, #2980b9); color: white; padding: 20px; border-radius: 15px; text-align: center; transition: all 0.3s; cursor: pointer;">
+                        <div style="font-size: 2rem; margin-bottom: 10px;">☁️</div>
+                        <h3 style="margin: 0 0 5px 0;">파일 저장소</h3>
+                        <p style="margin: 0; font-size: 0.9rem;">WebDAV 20GB 클라우드 저장</p>
+                    </div>
+                </a>
+            </div>
+        </div>
+
+        <div style="margin-top: 30px;">
+            <h4 style="color: #2c3e50; margin-bottom: 15px;">🔧 API 엔드포인트</h4>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px;">
                 <a href="/api/health" class="api-link" target="_blank">
                     <button style="width: 100%; padding: 12px; background: #3498db; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">
-                        🏥 Health Check
+                        🏥 Health
                     </button>
                 </a>
                 <a href="/api/trends" class="api-link" target="_blank">
                     <button style="width: 100%; padding: 12px; background: #e74c3c; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">
-                        📈 Trends API
+                        📈 Trends
                     </button>
                 </a>
                 <a href="/api/content" class="api-link" target="_blank">
-                    <button style="width: 100%; padding: 12px; background: #f39c12; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">
-                        ✍️ Content API
+                    <button style="width: 100%; padding: 12px; background: #27ae60; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">
+                        ✍️ Content
                     </button>
                 </a>
                 <a href="/api/storage" class="api-link" target="_blank">
-                    <button style="width: 100%; padding: 12px; background: #27ae60; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">
-                        💾 Storage API
+                    <button style="width: 100%; padding: 12px; background: #f39c12; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">
+                        💾 Storage
                     </button>
                 </a>
             </div>

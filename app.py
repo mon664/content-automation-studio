@@ -71,6 +71,23 @@ app.register_blueprint(video.video_bp, url_prefix='/api/video')
 app.register_blueprint(publisher.publisher_bp, url_prefix='/api/publisher')
 app.register_blueprint(storage.storage_bp, url_prefix='/api/storage')
 
+# 페이지 라우트
+@app.route('/trends')
+def trends_page():
+    return render_template('trends.html')
+
+@app.route('/content')
+def content_page():
+    return render_template('content.html')
+
+@app.route('/video')
+def video_page():
+    return render_template('video.html')
+
+@app.route('/storage')
+def storage_page():
+    return render_template('storage.html')
+
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(debug=False, host='0.0.0.0', port=port)

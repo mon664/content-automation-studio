@@ -85,6 +85,17 @@
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 생성 중...';
 
             try {
+                // 더미 데이터로 테스트
+                const dummyResult = {
+                    title: `${topic}에 관한 가이드`,
+                    summary: `${keywords} 관련된 유용한 정보를 제공합니다.`,
+                    content: `# ${topic}에 관한 가이드\n\n## 개요\n${keywords}는 현대 비즈니스에 필수적인 요소입니다.\n\n## 주요 내용\n1. ${topic}의 기본 개념\n2. ${keywords} 활용 방법\n3. 실제 사례 분석\n\n## 결론\n이 가이드가 ${topic}을 이해하는 데 도움이 되기를 바랍니다.`
+                };
+
+                displayResults(dummyResult);
+
+                // 나중에 실제 API가 준비되면 아래 코드를 사용
+                /*
                 const response = await fetch('/api/content/generate', {
                     method: 'POST',
                     headers: {
@@ -104,6 +115,7 @@
                 } else {
                     alert('콘텐츠 생성에 실패했습니다: ' + data.message);
                 }
+                */
             } catch (error) {
                 console.error('Error:', error);
                 alert('오류가 발생했습니다.');

@@ -68,15 +68,22 @@ def init_oauth(app):
     # GitHub OAuth 설정
     oauth.init_app(app)
 
+    # GitHub OAuth App 정보
+    client_id = os.getenv('GITHUB_CLIENT_ID')
+    client_secret = os.getenv('GITHUB_CLIENT_SECRET')
+
+    if not client_id or not client_secret:
+        logger.error("GitHub OAuth credentials not found in environment variables")
+        return None
+
     github = oauth.register(
         name='github',
-        client_id=os.getenv('GITHUB_CLIENT_ID'),
-        client_secret=os.getenv('GITHUB_CLIENT_SECRET'),
+        client_id=client_id,
+        client_secret=client_secret,
         access_token_url='https://github.com/login/oauth/access_token',
         authorize_url='https://github.com/login/oauth/authorize',
         api_base_url='https://api.github.com/',
-        client_kwargs={'scope': 'user:email'},
-        server_metadata_url='https://api.github.com/.well-known/openid-configuration'
+        client_kwargs={'scope': 'user:email'}
     )
 
     # LoginManager 초기화

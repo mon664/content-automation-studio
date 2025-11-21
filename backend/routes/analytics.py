@@ -1,8 +1,19 @@
 from flask import Blueprint, jsonify, request
 from datetime import datetime
 import logging
+import sys
+import os
 from typing import Dict, Any, Optional
-from ..utils.analytics_service import AnalyticsService
+
+# utils 디렉토리를 Python path에 추가
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+
+try:
+    from utils.analytics_service import AnalyticsService
+except ImportError:
+    # Fallback if analytics service not available
+    print("Warning: AnalyticsService not available, using fallback functionality")
+    AnalyticsService = None
 
 # Analytics 블루프린트 생성
 analytics_bp = Blueprint('analytics', __name__, url_prefix='/api/analytics')
@@ -11,7 +22,7 @@ analytics_bp = Blueprint('analytics', __name__, url_prefix='/api/analytics')
 logger = logging.getLogger(__name__)
 
 # Analytics 서비스 인스턴스
-service = AnalyticsService()
+service = AnalyticsService() if AnalyticsService else None
 
 def success_response(data: Any, message: str = "Success") -> Dict[str, Any]:
     """성공 응답 포맷"""

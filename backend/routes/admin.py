@@ -7,6 +7,18 @@ from flask import Blueprint, jsonify, request
 from datetime import datetime, timedelta
 import logging
 import random
+import sys
+import os
+
+# utils 디렉토리를 Python path에 추가
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+
+try:
+    from utils.analytics_service import AnalyticsService
+except ImportError:
+    # Fallback if analytics service not available
+    AnalyticsService = None
+    print("Warning: AnalyticsService not available, using fallback functionality")
 
 # Admin 블루프린트 생성
 admin_bp = Blueprint('admin', __name__, url_prefix='/api/admin')

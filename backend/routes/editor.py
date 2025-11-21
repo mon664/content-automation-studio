@@ -2,9 +2,19 @@ from flask import Blueprint, request, jsonify
 from datetime import datetime
 import logging
 import os
+import sys
 import tempfile
 from werkzeug.utils import secure_filename
-from ..utils.analytics_service import AnalyticsService
+
+# utils 디렉토리를 Python path에 추가
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+
+try:
+    from utils.analytics_service import AnalyticsService
+except ImportError:
+    # Fallback if analytics service not available
+    AnalyticsService = None
+    print("Warning: AnalyticsService not available, using fallback functionality")
 
 # Editor 블루프린트 생성
 editor_bp = Blueprint('editor', __name__, url_prefix='/api/editor')

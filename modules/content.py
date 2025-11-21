@@ -3,10 +3,22 @@ import google.generativeai as genai
 import json
 import os
 import re
+import sys
 from datetime import datetime
-from ..utils.prompts import generate_blog_prompt
-from ..utils.webdav import webdav_manager
-from ..utils.vertex_ai import image_generator
+
+# utils 디렉토리를 Python path에 추가
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+
+try:
+    from utils.prompts import generate_blog_prompt
+    from utils.webdav import webdav_manager
+    from utils.vertex_ai import image_generator
+except ImportError:
+    # Fallback if modules not available
+    generate_blog_prompt = None
+    webdav_manager = None
+    image_generator = None
+    print("Warning: Utils modules not available, using fallback functionality")
 
 content_bp = Blueprint('content', __name__)
 

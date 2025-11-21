@@ -1,3 +1,21 @@
+// DOMPurify 전역으로 사용 가능한지 확인
+let DOMPurify;
+if (typeof window !== 'undefined' && window.DOMPurify) {
+    DOMPurify = window.DOMPurify;
+} else {
+    // DOMPurify가 없는 경우 기본 HTML 정제 함수 사용
+    DOMPurify = {
+        sanitize: (html) => {
+            // 간단한 HTML 정제 (보안을 위해 실제로는 DOMPurify 사용 권장)
+            return html
+                .replace(/<script[^>]*>.*?<\/script>/gi, '')
+                .replace(/<iframe[^>]*>.*?<\/iframe>/gi, '')
+                .replace(/javascript:/gi, '')
+                .replace(/on\w+\s*=/gi, '');
+        }
+    };
+}
+
 // Toast UI Editor - 한국형 리치 텍스트 에디터
 class ToastEditor {
     constructor(containerId, options = {}) {

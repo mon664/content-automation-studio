@@ -162,12 +162,15 @@ def admin_page():
 
 @app.after_request
 def after_request(response):
-    """CORS 헤더만 추가하고 모든 CSP 헤더 제거"""
+    """CORS 헤더만 추가하고 모든 CSP 헤더 제거 및 완전 개방"""
     # Railway이 추가하는 CSP 헤더 강제 제거
     response.headers.pop('Content-Security-Policy', None)
     response.headers.pop('Content-Security-Policy-Report-Only', None)
     response.headers.pop('X-Content-Security-Policy', None)
     response.headers.pop('X-WebKit-CSP', None)
+
+    # Railway이 다시 추가하는 것을 방지하기 위해 완전 개방된 CSP 설정
+    response.headers['Content-Security-Policy'] = "default-src * 'unsafe-inline' 'unsafe-eval' data: blob:; font-src * data:; style-src * 'unsafe-inline'; script-src * 'unsafe-inline' 'unsafe-eval'; img-src * data: blob:; connect-src *; frame-src *; child-src *"
 
     # CORS 헤더 추가
     response.headers.add('Access-Control-Allow-Origin', '*')

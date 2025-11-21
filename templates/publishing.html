@@ -290,7 +290,23 @@
     </style>
 </head>
 <body>
-    <div class="publishing-container">
+    <!-- 네비게이션 바 -->
+    <nav class="navbar" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 15px 0; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+        <div class="nav-container" style="max-width: 1200px; margin: 0 auto; padding: 0 20px; display: flex; justify-content: space-between; align-items: center;">
+            <a href="/" style="color: white; text-decoration: none; font-size: 1.5rem; font-weight: 700;">
+                🚀 Content Automation Studio
+            </a>
+            <div class="nav-links" style="display: flex; gap: 20px; align-items: center;">
+                <a href="/trends" style="color: white; text-decoration: none; padding: 8px 15px; border-radius: 5px; transition: background 0.3s;">📊 트렌드</a>
+                <a href="/content" style="color: white; text-decoration: none; padding: 8px 15px; border-radius: 5px; transition: background 0.3s;">✍️ 콘텐츠</a>
+                <a href="/publishing" style="color: white; text-decoration: none; padding: 8px 15px; border-radius: 5px; background: rgba(255,255,255,0.2);">📝 발행</a>
+                <a href="/scheduler" style="color: white; text-decoration: none; padding: 8px 15px; border-radius: 5px; transition: background 0.3s;">⏰ 스케줄링</a>
+                <a href="/storage" style="color: white; text-decoration: none; padding: 8px 15px; border-radius: 5px; transition: background 0.3s;">☁️ 저장소</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="publishing-container" style="margin-top: 20px;">
         <a href="/" class="back-link">
             <i class="fas fa-arrow-left"></i> 홈으로 돌아가기
         </a>
@@ -448,7 +464,7 @@
                             </div>
                             <div class="form-group">
                                 <label for="password">비밀번호</label>
-                                <input type="password" id="password" name="password" placeholder="비밀번호">
+                                <input type="password" id="password" name="password" placeholder="비밀번호" autocomplete="current-password">
                             </div>
                         </div>
                         <div class="form-group">
@@ -979,10 +995,70 @@
             }
         }
 
-        // 페이지 로드 시 기록 불러오기
+        // 페이지 로드 시 초기화
         document.addEventListener('DOMContentLoaded', () => {
             loadHistory();
+            loadContentFromSession();
         });
+
+        // 콘텐츠 페이지에서 넘어온 데이터 로드
+        function loadContentFromSession() {
+            const publishData = sessionStorage.getItem('publishData');
+            if (publishData) {
+                const data = JSON.parse(publishData);
+
+                // 제목과 내용 자동 입력
+                document.getElementById('title').value = data.title || '';
+                document.getElementById('content').value = data.content || '';
+
+                // 데이터 전송 후 세션 스토리지 정리
+                sessionStorage.removeItem('publishData');
+
+                // 알림 표시
+                showNotification('콘텐츠가 자동으로 입력되었습니다.', 'success');
+            }
+        }
+
+        // 알림 표시 함수
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                padding: 15px 20px;
+                border-radius: 8px;
+                color: white;
+                font-weight: 600;
+                z-index: 1000;
+                transform: translateX(100%);
+                transition: transform 0.3s ease;
+            `;
+
+            if (type === 'success') {
+                notification.style.background = 'linear-gradient(45deg, #27ae60, #229954)';
+            } else if (type === 'error') {
+                notification.style.background = 'linear-gradient(45deg, #e74c3c, #c0392b)';
+            } else {
+                notification.style.background = 'linear-gradient(45deg, #3498db, #2980b9)';
+            }
+
+            notification.textContent = message;
+            document.body.appendChild(notification);
+
+            // 애니메이션 효과
+            setTimeout(() => {
+                notification.style.transform = 'translateX(0)';
+            }, 100);
+
+            // 3초 후 자동 제거
+            setTimeout(() => {
+                notification.style.transform = 'translateX(100%)';
+                setTimeout(() => {
+                    document.body.removeChild(notification);
+                }, 300);
+            }, 3000);
+        }
     </script>
 </body>
 </html>

@@ -809,10 +809,10 @@
                         <button class="copy-btn" onclick="copyToClipboard('${result.content.replace(/'/g, "\\'")}')">
                             <i class="fas fa-copy"></i> 복사
                         </button>
-                        <button class="publish-btn" onclick="preparePublishContent('${result.title.replace(/'/g, "\\'")}', '${result.content.replace(/'/g, "\\'")}')">
+                        <button class="publish-btn" onclick="preparePublishContent(\`${result.title.replace(/`/g, '\\`')}\`, \`${result.content.replace(/`/g, '\\`')}\`)">
                             <i class="fas fa-paper-plane"></i> 발행하기
                         </button>
-                        <button class="schedule-btn" onclick="prepareScheduleContent('${result.title.replace(/'/g, "\\'")}', '${result.content.replace(/'/g, "\\'")}')">
+                        <button class="schedule-btn" onclick="prepareScheduleContent(\`${result.title.replace(/`/g, '\\`')}\`, \`${result.content.replace(/`/g, '\\`')}\`)">
                             <i class="fas fa-clock"></i> 예약 발행
                         </button>
                     </div>

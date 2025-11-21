@@ -2,7 +2,11 @@ from flask import Blueprint, request, jsonify
 import google.generativeai as genai
 import json
 import os
+import re
 from datetime import datetime
+from ..utils.prompts import generate_blog_prompt
+from ..utils.webdav import webdav_manager
+from ..utils.vertex_ai import image_generator
 
 content_bp = Blueprint('content', __name__)
 
@@ -35,34 +39,40 @@ def generate_blog():
         if not GEMINI_AVAILABLE:
             return generate_fallback_blog_content(topic, keywords, tone, length, target_audience)
 
+        # 파워 블로거 프롬프트로 콘텐츠 생성
+        prompt = generate_blog_prompt(topic, keywords, target_audience, tone)
+
         # 블로그 글 생성 (타임아웃 방지)
         try:
-            blog_content = generate_blog_content_safe(topic, keywords, tone, length, target_audience)
+            blog_content = generate_content_with_enhanced_prompt(prompt)
         except Exception as api_error:
             print(f"Content generation failed: {api_error}")
             return generate_fallback_blog_content(topic, keywords, tone, length, target_audience)
 
-        # 제목 추천
-        title = generate_title(topic, tone)
+        # 이미지 프롬프트 추출 및 처리
+        image_prompts = extract_and_process_image_prompts(blog_content)
 
-        # 이미지 생성 프롬프트
-        image_prompts = generate_image_prompts(topic, blog_content)
+        # 이미지 자동 생성 및 교체
+        processed_content = process_images_with_generation(blog_content, image_prompts)
 
         # SEO 메타데이터
         seo_meta = generate_seo_metadata(topic, keywords, blog_content)
 
         return jsonify({
             'success': True,
-            'title': title,
-            'content': blog_content,
-            'image_prompts': image_prompts,
+            'title': generate_title(topic, tone),
+            'content': processed_content,
+            'image_count': len(image_prompts),
+            'generated_images': image_prompts,
             'seo_meta': seo_meta,
-            'optimization_info': {
-                'auto_optimized': True,
-                'keyword_analysis': generate_keyword_analysis(topic, keywords),
-                'optimization_level': 'advanced',
-                'seo_score': 'enhanced',
-                'readability_score': 'improved'
+            'enhancement_info': {
+                'ai_enhanced': True,
+                'power_blogger_style': True,
+                'storytelling_applied': True,
+                'image_integration': True,
+                'word_count': len(processed_content.split()),
+                'character_count': len(processed_content),
+                'estimated_reading_time': len(processed_content.split()) / 200  # 분당 200단어 기준
             },
             'metadata': {
                 'topic': topic,
@@ -70,10 +80,9 @@ def generate_blog():
                 'tone': tone,
                 'length': length,
                 'target_audience': target_audience,
-                'word_count': len(blog_content.split()),
                 'generated_at': datetime.now().isoformat(),
-                'ai_enhanced': True,
-                'optimization_applied': ['SEO 최적화', '가독성 개선', '전문성 강화', '참여도 증대']
+                'enhancement_level': 'professional',
+                'content_type': 'blog_post'
             }
         })
 
@@ -740,6 +749,132 @@ def basic_content_improvement(content, keywords):
             improved_content = '. '.join(sentences[:len(sentences)//2]) + '.\n\n## 핵심 전략과 실용적 팁\n\n' + '. '.join(sentences[len(sentences)//2:])
 
     return improved_content
+
+def generate_content_with_enhanced_prompt(prompt):
+    """
+    파워 프롬프트로 향상된 콘텐츠 생성
+    """
+    try:
+        response = model.generate_content(prompt)
+        return response.text
+    except Exception as e:
+        print(f"Enhanced prompt generation failed: {e}")
+        raise e
+
+def extract_and_process_image_prompts(content):
+    """
+    콘텐츠에서 이미지 프롬프트 추출 및 처리
+    """
+    # 정규식으로 이미지 프롬프트 추출
+    pattern = r'\[\[IMAGE_PROMPT:\s*([^\]]+)\s*\]\]'
+    matches = re.findall(pattern, content)
+
+    # 중복 제거 및 정리
+    unique_prompts = []
+    seen_prompts = set()
+
+    for match in matches:
+        cleaned_prompt = match.strip()
+        if cleaned_prompt and cleaned_prompt not in seen_prompts:
+            unique_prompts.append(cleaned_prompt)
+            seen_prompts.add(cleaned_prompt)
+
+    print(f"Extracted {len(unique_prompts)} image prompts")
+    return unique_prompts
+
+def process_images_with_generation(content, image_prompts):
+    """
+    이미지 자동 생성 및 WebDAV 업로드 처리
+    """
+    if not image_prompts:
+        return content
+
+    processed_content = content
+
+    for i, prompt in enumerate(image_prompts):
+        try:
+            print(f"Generating image {i+1}/{len(image_prompts)}: {prompt}")
+
+            # 프롬프트 강화 (블로그용 최적화)
+            enhanced_prompt = image_generator.enhance_prompt_for_blog(prompt)
+
+            # 이미지 생성 (Vertex AI Imagen 3)
+            image_data = image_generator.generate_image(
+                prompt=enhanced_prompt,
+                aspect_ratio="16:9",  # 블로그용 최적 비율
+                style="photograph"    # 전문적인 사진 스타일
+            )
+
+            if image_data:
+                # WebDAV에 업로드
+                timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+                filename = f"blog_image_{timestamp}_{i+1}.png"
+
+                public_url = webdav_manager.upload_image_from_data(
+                    image_data=image_data,
+                    filename=filename,
+                    folder="blog_generated"
+                )
+
+                if public_url:
+                    # 콘텐츠에서 이미지 태그 교체
+                    markdown_image = f"![{prompt}]({public_url})"
+                    processed_content = processed_content.replace(
+                        f"[[IMAGE_PROMPT: {prompt}]]",
+                        f"\n\n{markdown_image}\n\n"
+                    )
+                    print(f"Image {i+1} uploaded successfully: {public_url}")
+                else:
+                    print(f"Failed to upload image {i+1} to WebDAV")
+                    # 업로드 실패 시 플레이스홀더 유지
+                    processed_content = processed_content.replace(
+                        f"[[IMAGE_PROMPT: {prompt}]]",
+                        f"\n\n[이미지: {prompt}]\n\n"
+                    )
+            else:
+                print(f"Failed to generate image {i+1}")
+                # 생성 실패 시 플레이스홀더 유지
+                processed_content = processed_content.replace(
+                    f"[[IMAGE_PROMPT: {prompt}]]",
+                    f"\n\n[이미지: {prompt}]\n\n"
+                )
+
+        except Exception as e:
+            print(f"Error processing image {i+1}: {e}")
+            # 에러 발생 시 플레이스홀더 유지
+            processed_content = processed_content.replace(
+                f"[[IMAGE_PROMPT: {prompt}]]",
+                f"\n\n[이미지: {prompt}]\n\n"
+            )
+            continue
+
+    return processed_content
+
+def generate_title(topic, tone='professional'):
+    """
+    주제에 맞는 전문적인 제목 생성
+    """
+    title_patterns = {
+        'professional': [
+            f"{topic} 전문 가이드: 현대 비즈니스 성공 전략",
+            f"{topic} 분석: 핵심 인사이트와 실전 적용 방안",
+            f"{topic} 완벽 정복: 초보부터 전문가까지"
+        ],
+        'casual': [
+            f"{topic} 쉽게: 알기 쉽게 이해하는 방법",
+            f"{topic} 이야기: 재미와 실전 경험 공유",
+            f"{topic} 꿀팁: 모르면 유용한 정보 모음"
+        ],
+        'formal': [
+            f"{topic} 연구: 학문적 접근과 실증 연구",
+            f"{topic} 고찰: 전문가적 분석과 이론적 토론",
+            f"{topic} 보고서: 체계적 분석과 정책 제언"
+        ]
+    }
+
+    import random
+    patterns = title_patterns.get(tone, title_patterns['professional'])
+    return random.choice(patterns)
 
 def smart_keyword_integration(content, keywords):
     """지능형 키워드 통합"""

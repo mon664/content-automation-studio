@@ -85,37 +85,43 @@
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 생성 중...';
 
             try {
-                // 더미 데이터로 테스트
-                const dummyResult = {
-                    title: `${topic}에 관한 가이드`,
-                    summary: `${keywords} 관련된 유용한 정보를 제공합니다.`,
-                    content: `# ${topic}에 관한 가이드\n\n## 개요\n${keywords}는 현대 비즈니스에 필수적인 요소입니다.\n\n## 주요 내용\n1. ${topic}의 기본 개념\n2. ${keywords} 활용 방법\n3. 실제 사례 분석\n\n## 결론\n이 가이드가 ${topic}을 이해하는 데 도움이 되기를 바랍니다.`
-                };
-
-                displayResults(dummyResult);
-
-                // 나중에 실제 API가 준비되면 아래 코드를 사용
-                /*
-                const response = await fetch('/api/content/generate', {
+                // 실제 API 호출
+                const response = await fetch('/api/content/generate-blog', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
                         topic: topic,
-                        keywords: keywords,
-                        type: contentType
+                        keywords: keywords ? keywords.split(',').map(k => k.trim()) : [],
+                        tone: 'professional',
+                        length: 'long',
+                        target_audience: 'general'
                     })
                 });
 
                 const data = await response.json();
 
                 if (data.success) {
-                    displayResults(data.result);
+                    displayResults({
+                        title: data.title,
+                        summary: data.seo_meta?.description || 'AI가 생성한 전문적인 콘텐츠입니다.',
+                        content: data.content,
+                        imageCount: data.image_count || 0,
+                        metadata: data.enhancement_info || {}
+                    });
                 } else {
-                    alert('콘텐츠 생성에 실패했습니다: ' + data.message);
+                    // API 실패 시 더미 데이터 fallback
+                    console.warn('API call failed, using fallback data:', data.error || data.message);
+                    const dummyResult = {
+                        title: `${topic}에 관한 가이드`,
+                        summary: `${keywords} 관련된 유용한 정보를 제공합니다.`,
+                        content: `# ${topic}에 관한 가이드\n\n## 개요\n${keywords}는 현대 비즈니스에 필수적인 요소입니다.\n\n## 주요 내용\n1. ${topic}의 기본 개념\n2. ${keywords} 활용 방법\n3. 실제 사례 분석\n\n## 결론\n이 가이드가 ${topic}을 이해하는 데 도움이 되기를 바랍니다.`,
+                        imageCount: 0,
+                        metadata: { fallback: true }
+                    };
+                    displayResults(dummyResult);
                 }
-                */
             } catch (error) {
                 console.error('Error:', error);
                 alert('오류가 발생했습니다.');
@@ -128,12 +134,32 @@
         function displayResults(result) {
             const resultsContent = document.getElementById('results-content');
 
+            // 메타데이터 정보 표시
+            let metadataInfo = '';
+            if (result.metadata && result.metadata.ai_enhanced) {
+                metadataInfo = `
+                    <div class="content-metadata" style="margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 5px; font-size: 0.9em;">
+                        <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+                            <span><i class="fas fa-magic"></i> AI 강화</span>
+                            <span><i class="fas fa-user-edit"></i> 전문 블로거 스타일</span>
+                            <span><i class="fas fa-book-open"></i> 스토리텔링 형식</span>
+                            ${result.imageCount > 0 ? `<span><i class="fas fa-images"></i> 이미지 ${result.imageCount}개 생성</span>` : ''}
+                            <span><i class="fas fa-file-word"></i> ${result.metadata.word_count || 0}자</span>
+                            <span><i class="fas fa-clock"></i> 약 ${result.metadata.estimated_reading_time || 0}분 읽기</span>
+                        </div>
+                    </div>
+                `;
+            }
+
             resultsContent.innerHTML = `
                 <div class="content-item">
                     <h3>${result.title}</h3>
                     <p><strong>요약:</strong> ${result.summary}</p>
+                    ${metadataInfo}
                     <div class="content-preview">
-                        <p>${result.content.substring(0, 200)}...</p>
+                        <div style="max-height: 200px; overflow-y: auto; border: 1px solid #eee; padding: 10px; margin: 10px 0;">
+                            ${formatMarkdown(result.content)}
+                        </div>
                     </div>
                     <div class="content-actions">
                         <button class="btn btn-primary" onclick="openEditor('${result.title}', \`${result.content}\`)">
@@ -142,11 +168,44 @@
                         <button class="btn btn-secondary" onclick="copyToClipboard(\`${result.content}\`)">
                             <i class="fas fa-copy"></i> 복사
                         </button>
+                        <button class="btn btn-info" onclick="downloadMarkdown('${result.title}.md', \`${result.content}\`)">
+                            <i class="fas fa-download"></i> 다운로드
+                        </button>
                     </div>
                 </div>
             `;
 
             document.getElementById('results').style.display = 'block';
+        }
+
+        function formatMarkdown(content) {
+            // 간단한 마크다운 렌더링
+            return content
+                .replace(/^# (.*$)/gim, '<h1>$1</h1>')
+                .replace(/^## (.*$)/gim, '<h2>$1</h2>')
+                .replace(/^### (.*$)/gim, '<h3>$1</h3>')
+                .replace(/\*\*(.*)\*\*/gim, '<strong>$1</strong>')
+                .replace(/\*(.*)\*/gim, '<em>$1</em>')
+                .replace(/!\[(.*?)\]\((.*?)\)/gim, '<img src="$2" alt="$1" style="max-width: 100%; height: auto; margin: 10px 0;" />')
+                .replace(/\[이미지: (.*?)\]/gim, '<div style="padding: 10px; background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 5px; margin: 10px 0;"><i class="fas fa-image"></i> 이미지: $1</div>')
+                .replace(/^\- (.*$)/gim, '<li>$1</li>')
+                .replace(/^\d+\. (.*$)/gim, '<li>$1</li>')
+                .replace(/\n\n/gim, '</p><p>')
+                .replace(/^/, '<p>')
+                .replace(/$/, '</p>');
+        }
+
+        function downloadMarkdown(filename, content) {
+            const blob = new Blob([content], { type: 'text/markdown' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+            showToast('Markdown 파일이 다운로드되었습니다.', 'success');
         }
 
         function copyToClipboard(text) {

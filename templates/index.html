@@ -23,7 +23,9 @@
                 <li>🎨 Image Generation (Vertex AI)</li>
                 <li>🎬 Video Creation (TTS + FFmpeg)</li>
                 <li>☁️ WebDAV Storage (20GB)</li>
-                <li>📱 Multi-Platform Publishing</li>
+                <li>📝 Blog Auto-Publishing</li>
+                <li>⏰ Content Scheduling</li>
+                <li>🎨 Professional Templates</li>
             </ul>
         </div>
 
@@ -60,6 +62,22 @@
                         <p style="margin: 0; font-size: 0.9rem;">WebDAV 20GB 클라우드 저장</p>
                     </div>
                 </a>
+
+                <a href="/publishing" style="text-decoration: none;">
+                    <div style="background: linear-gradient(135deg, #9b59b6, #8e44ad); color: white; padding: 20px; border-radius: 15px; text-align: center; transition: all 0.3s; cursor: pointer;">
+                        <div style="font-size: 2rem; margin-bottom: 10px;">📝</div>
+                        <h3 style="margin: 0 0 5px 0;">블로그 발행</h3>
+                        <p style="margin: 0; font-size: 0.9rem;">티스토리, 네이버, 구글 블로거</p>
+                    </div>
+                </a>
+
+                <a href="/scheduler" style="text-decoration: none;">
+                    <div style="background: linear-gradient(135deg, #2ecc71, #27ae60); color: white; padding: 20px; border-radius: 15px; text-align: center; transition: all 0.3s; cursor: pointer;">
+                        <div style="font-size: 2rem; margin-bottom: 10px;">⏰</div>
+                        <h3 style="margin: 0 0 5px 0;">콘텐츠 스케줄링</h3>
+                        <p style="margin: 0; font-size: 0.9rem;">자동 발행 시간 설정</p>
+                    </div>
+                </a>
             </div>
         </div>
 
@@ -86,6 +104,16 @@
                         💾 Storage
                     </button>
                 </a>
+                <a href="/api/publisher" class="api-link" target="_blank">
+                    <button style="width: 100%; padding: 12px; background: #9b59b6; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">
+                        📝 Publisher
+                    </button>
+                </a>
+                <a href="/api/scheduler" class="api-link" target="_blank">
+                    <button style="width: 100%; padding: 12px; background: #2ecc71; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">
+                        ⏰ Scheduler
+                    </button>
+                </a>
             </div>
         </div>
 
@@ -96,7 +124,9 @@
                 <p><strong>POST /api/trends/analyze</strong> - 키워드 트렌드 분석</p>
                 <p><strong>POST /api/content/generate</strong> - AI 콘텐츠 생성</p>
                 <p><strong>POST /api/storage/upload</strong> - 파일 업로드</p>
-                <p><strong>GET /api/publisher/platforms</strong> - 발행 플랫폼 목록</p>
+                <p><strong>POST /api/publisher/publish</strong> - 블로그 발행</p>
+                <p><strong>GET /api/publisher/templates</strong> - 블로그 템플릿</p>
+                <p><strong>POST /api/scheduler/schedule</strong> - 콘텐츠 스케줄링</p>
             </div>
         </div>
 

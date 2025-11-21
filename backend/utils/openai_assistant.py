@@ -15,10 +15,15 @@ logger = logging.getLogger(__name__)
 
 # Gemini API 설정
 try:
+    import google.generativeai as genai
     genai.configure(api_key=os.getenv('GEMINI_API_KEY', 'AIzaSyBlxBK-1-vl-Uzy5Vys9tLPQynRhGk30UY'))
     model = genai.GenerativeModel('gemini-pro')
     GEMINI_AVAILABLE = True
     logger.info("Gemini API initialized successfully")
+except ImportError as e:
+    logger.warning(f"google.generativeai library not available: {e}")
+    GEMINI_AVAILABLE = False
+    model = None
 except Exception as e:
     logger.error(f"Gemini API initialization failed: {e}")
     GEMINI_AVAILABLE = False
@@ -30,8 +35,10 @@ class GeminiBlogAssistant:
     def __init__(self):
         """Gemini Assistant 초기화"""
         if not GEMINI_AVAILABLE:
-            raise Exception("Gemini API를 사용할 수 없습니다.")
-        self.model = model
+            logger.warning("Gemini not available, but allowing fallback mode")
+            self.model = None
+        else:
+            self.model = model
 
     def generate_blog_post(self, keyword: str, platform: str = "general",
                           style: str = "professional") -> Dict[str, str]:
@@ -47,6 +54,12 @@ class GeminiBlogAssistant:
             Dict: 생성된 블로그 데이터
         """
         try:
+            if not GEMINI_AVAILABLE:
+                logger.warning("Gemini not available, using fallback mode")
+                # Fallback 블로그 생성기 사용
+                fallback_generator = FallbackBlogGenerator()
+                return fallback_generator.generate_blog_post(keyword, platform, style)
+
             response = self._get_gemini_response(keyword, platform, style)
             title, tags, slug, content = self._parse_response(response)
 
@@ -63,7 +76,10 @@ class GeminiBlogAssistant:
 
         except Exception as e:
             logger.error(f"블로그 생성 실패: {str(e)}")
-            raise Exception(f"블로그 생성에 실패했습니다: {str(e)}")
+            # Fallback 시도
+            logger.warning("Trying fallback blog generation due to error")
+            fallback_generator = FallbackBlogGenerator()
+            return fallback_generator.generate_blog_post(keyword, platform, style)
 
     def _get_gemini_response(self, keyword: str, platform: str, style: str) -> str:
         """Gemini API로 콘텐츠 생성"""

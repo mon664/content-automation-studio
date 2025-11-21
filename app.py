@@ -108,6 +108,20 @@ def health_check():
         'timestamp': datetime.now().isoformat()
     })
 
+@app.route('/api/test')
+def test_api():
+    """테스트용 API 엔드포인트"""
+    return jsonify({
+        'message': 'API routes are working!',
+        'timestamp': datetime.now().isoformat(),
+        'method': request.method,
+        'success': True
+    })
+
+@app.route('/api/content/generate', methods=['GET', 'POST', 'OPTIONS'])
+def emergency_content_generate():
+    """긴급 콘텐츠 생성 API - 블루프린트 실패시 직접 처리"""
+
 # 모듈 임포트 - 강제 임포트 with error handling
 try:
     from modules import auth, trends, content, video, publisher, storage, scheduler

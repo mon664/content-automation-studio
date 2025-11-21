@@ -5,10 +5,17 @@ import subprocess
 from datetime import datetime, timedelta
 import uuid
 from gtts import gTTS
-import cv2
-import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 import requests
+
+# OpenCV 임포트 (의존성 문제 방지)
+try:
+    import cv2
+    import numpy as np
+    CV2_AVAILABLE = True
+except ImportError:
+    CV2_AVAILABLE = False
+    print("Warning: OpenCV not available. Some video features will be disabled.")
 
 video_bp = Blueprint('video', __name__)
 
@@ -328,7 +335,7 @@ def estimate_audio_duration(text, speed='normal'):
     return duration
 
 def create_text_slide(text, width, height, style, slide_number):
-    """텍스트 슬라이드 생성"""
+    """텍스트 슬라이드 생성 (OpenCV 미사용 버전)"""
     # 이미지 생성
     img = Image.new('RGB', (width, height), color='white')
     draw = ImageDraw.Draw(img)
@@ -453,35 +460,25 @@ def create_vertical_slide(text, width, height, slide_number):
     return temp_path
 
 def create_video_from_slideshow(image_paths, audio_path, temp_dir, output_filename, transition='fade'):
-    """슬라이드쇼 비디오 생성"""
+    """슬라이드쇼 비디오 생성 (FFmpeg 전용 버전)"""
     video_path = os.path.join(temp_dir, output_filename)
 
-    # 이미지 정보 확인
-    first_img = cv2.imread(image_paths[0])
-    height, width, layers = first_img.shape
-    size = (width, height)
+    # FFmpeg로 직접 비디오 생성 (이미지 목록 파일 사용)
+    concat_list_path = os.path.join(temp_dir, "image_list.txt")
+    with open(concat_list_path, 'w') as f:
+        for img_path in image_paths:
+            f.write(f"file '{img_path}'\n")
+            f.write(f"duration 2\n")  # 각 이미지 2초
 
-    # 비디오 작성자 초기화
-    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-    out = cv2.VideoWriter(video_path, fourcc, 20.0, size)
-
-    # 이미지 시퀀스 생성
-    for img_path in image_paths:
-        img = cv2.imread(img_path)
-
-        # 각 이미지를 여러 프레임으로 (지속 시간 조절)
-        for _ in range(40):  # 약 2초 (20fps * 2)
-            out.write(img)
-
-    out.release()
-
-    # 오디오와 비디오 결합 (FFmpeg 사용)
+    # 오디오와 비디오 결합
     final_video_path = os.path.join(temp_dir, f"final_{output_filename}")
     ffmpeg_cmd = [
-        'ffmpeg', '-i', video_path, '-i', audio_path,
-        '-c:v', 'copy', '-c:a', 'aac',
-        '-shortest', final_video_path,
-        '-y'  # 기존 파일 덮어쓰기
+        'ffmpeg', '-y',
+        '-f', 'concat', '-safe', '0', '-i', concat_list_path,
+        '-i', audio_path,
+        '-c:v', 'libx264', '-pix_fmt', 'yuv420p',
+        '-c:a', 'aac', '-shortest',
+        final_video_path
     ]
 
     try:
@@ -489,7 +486,7 @@ def create_video_from_slideshow(image_paths, audio_path, temp_dir, output_filena
         return final_video_path
     except subprocess.CalledProcessError as e:
         print(f"FFmpeg error: {e}")
-        return video_path  # FFmpeg 실패 시 음성 없는 비디오 반환
+        return None
 
 def get_audio_duration(audio_url):
     """오디오 길이 가져오기"""

@@ -86,7 +86,9 @@ def api_info():
             'Real-time Image Upload Integration',
             'AutoVid-Style Video Script Generation',
             'YouTube SEO Optimization',
-            'Batch Content Processing'
+            'Batch Content Processing',
+            'Gemini-Powered AutoBlog System',
+            'Multi-Platform Blog Publishing'
         ],
         'timestamp': datetime.now().isoformat()
     })
@@ -109,7 +111,7 @@ def health_check():
 from modules import auth, trends, content, video, publisher, storage, scheduler
 
 # Analytics 백엔드 임포트
-from backend.routes import analytics, editor, admin, approval, video_script
+from backend.routes import analytics, editor, admin, approval, video_script, gemini_blog
 
 # GitHub OAuth 초기화
 github_oauth = auth.init_oauth(app)
@@ -127,6 +129,7 @@ app.register_blueprint(editor.editor_bp)       # 에디터 전용 API 활성화
 app.register_blueprint(admin.admin_bp)         # 관리자 패널 API 활성화
 app.register_blueprint(approval.approval_bp)   # 사용자 승인 API 활성화
 app.register_blueprint(video_script.video_script_bp)  # AutoVid 스타일 비디오 스크립트 API 활성화
+app.register_blueprint(gemini_blog.gemini_blog_bp)  # Gemini 기반 블로그 자동 발행 API 활성화
 
 # 페이지 라우트
 @app.route('/trends')
@@ -164,6 +167,10 @@ def admin_page():
 @app.route('/video-script')
 def video_script_page():
     return render_template('video_script.html')
+
+@app.route('/autoblog')
+def autoblog_page():
+    return render_template('autoblog.html')
 
 # CSP 헤더 완전 제거 (개발을 위해 일시적으로 비활성화)
 # GitHub OAuth와 기타 기능은 CSP 없이도 작동하도록 설계됨

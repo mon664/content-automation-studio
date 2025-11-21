@@ -44,7 +44,10 @@ def api_info():
             'WebDAV Storage (20GB)',
             'Blog Auto-Publishing (Tistory, Naver, Blogger)',
             'Advanced Content Scheduling (APScheduler)',
-            'Professional HTML Blog Templates'
+            'Professional HTML Blog Templates',
+            'Performance Analytics Dashboard',
+            'Rich Text WYSIWYG Editor',
+            'Real-time Image Upload Integration'
         ],
         'timestamp': datetime.now().isoformat()
     })
@@ -66,6 +69,9 @@ def health_check():
 # 모듈 임포트
 from modules import trends, content, video, publisher, storage, scheduler
 
+# Analytics 백엔드 임포트
+from backend.routes import analytics, editor
+
 # 블루프린트 등록
 app.register_blueprint(trends.trends_bp, url_prefix='/api/trends')
 app.register_blueprint(content.content_bp, url_prefix='/api/content')
@@ -73,6 +79,8 @@ app.register_blueprint(video.video_bp, url_prefix='/api/video')
 app.register_blueprint(publisher.publisher_bp, url_prefix='/api/publisher')
 app.register_blueprint(storage.storage_bp, url_prefix='/api/storage')
 app.register_blueprint(scheduler.scheduler_bp, url_prefix='/api/scheduler')
+app.register_blueprint(analytics.analytics_bp)  # 성과 분석 API 활성화
+app.register_blueprint(editor.editor_bp)       # 에디터 전용 API 활성화
 
 # 페이지 라우트
 @app.route('/trends')
@@ -98,6 +106,10 @@ def publishing_page():
 @app.route('/scheduler')
 def scheduler_page():
     return render_template('scheduler.html')
+
+@app.route('/analytics')
+def analytics_page():
+    return render_template('analytics.html')
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))

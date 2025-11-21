@@ -1,7 +1,5 @@
 from flask import Flask, request, jsonify, render_template
-from flask_cors import CORS
 import os
-import time
 from datetime import datetime
 
 app = Flask(__name__,
@@ -9,20 +7,16 @@ app = Flask(__name__,
            static_url_path='/static',
            template_folder='templates')
 
-# CSP 완전 비활성화 설정
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
 app.config['TEMPLATES_AUTO_RELOAD'] = True
 
-# Flask-Talisman CSP 비활성화 (설치된 경우)
-try:
-    from flask_talisman import Talisman
-    Talisman(app, force_https=False, **{
-        'content_security_policy': None
-    })
-except ImportError:
-    pass
-
-CORS(app)
+# Simple CORS headers via decorator instead of flask_cors
+@app.after_request
+def after_request(response):
+    response.headers.add('Access-Control-Allow-Origin', '*')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+    response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
+    return response
 
 # 기본 보안 설정
 app.secret_key = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
@@ -121,6 +115,38 @@ def test_api():
 @app.route('/api/content/generate', methods=['GET', 'POST', 'OPTIONS'])
 def emergency_content_generate():
     """긴급 콘텐츠 생성 API - 블루프린트 실패시 직접 처리"""
+    try:
+        data = request.get_json()
+        topic = data.get('topic', 'AI 기술 혁신')
+
+        # 즉시 응답 생성
+        return jsonify({
+            'success': True,
+            'content': f"# {topic}에 대한 전문 분석\n\n## 주요 내용\n\n{topic}는 현재 기술계에서 가장 주목받는 분야입니다. 최근 연구들에 따르면 이 기술은 여러 산업에 혁신을 가져오고 있으며, 전문가들은 앞으로 5년 안에 더 큰 발전이 있을 것으로 예측하고 있습니다.\n\n## 전망\n\n전문가들은 {topic} 기술이 앞으로 더욱 발전할 것이며, 이는 다양한 분야에서 활용될 수 있을 것이라고 말합니다. 특히 다음과 같은 영역에서 중요한 역할을 할 것으로 기대됩니다:\n\n- 기술 혁신 및 연구개발\n- 산업 자동화 및 효율성 증대\n- 새로운 비즈니스 모델 창출\n- 사회적 가치 창출\n\n이러한 발전은 우리 삶의 질을 향상시키는 데 크게 기여할 것입니다.",
+            'title': f"{topic} 혁신과 전망",
+            'images': [
+                {
+                    'url': 'https://via.placeholder.com/600x400/4A90E2/FFFFFF?text=' + topic,
+                    'prompt': f'{topic} 개념도',
+                    'style': 'professional'
+                },
+                {
+                    'url': 'https://via.placeholder.com/600x400/7B68EE/FFFFFF?text=' + topic + '+활용',
+                    'prompt': f'{topic} 활용 사례',
+                    'style': 'professional'
+                }
+            ],
+            'topic': topic,
+            'generated_at': datetime.now().isoformat(),
+            'provider': 'emergency_direct_api'
+        })
+
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'message': 'Emergency API error occurred'
+        }), 500
 
 # 모듈 임포트 - 강제 임포트 with error handling
 try:
@@ -316,23 +342,6 @@ def autoblog_page():
 # CSP 헤더 완전 제거 (개발을 위해 일시적으로 비활성화)
 # GitHub OAuth와 기타 기능은 CSP 없이도 작동하도록 설계됨
 
-@app.after_request
-def after_request(response):
-    """CORS 헤더만 추가하고 모든 CSP 헤더 제거 및 완전 개방"""
-    # Railway이 추가하는 CSP 헤더 강제 제거
-    response.headers.pop('Content-Security-Policy', None)
-    response.headers.pop('Content-Security-Policy-Report-Only', None)
-    response.headers.pop('X-Content-Security-Policy', None)
-    response.headers.pop('X-WebKit-CSP', None)
-
-    # Railway이 다시 추가하는 것을 방지하기 위해 완전 개방된 CSP 설정
-    response.headers['Content-Security-Policy'] = "default-src * 'unsafe-inline' 'unsafe-eval' data: blob:; font-src * data:; style-src * 'unsafe-inline'; script-src * 'unsafe-inline' 'unsafe-eval'; img-src * data: blob:; connect-src *; frame-src *; child-src *"
-
-    # CORS 헤더 추가
-    response.headers.add('Access-Control-Allow-Origin', '*')
-    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
-    response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
-    return response
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))

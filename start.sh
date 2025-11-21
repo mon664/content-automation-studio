@@ -20,4 +20,12 @@ env | grep RAILWAY || echo "No RAILWAY variables found"
 
 echo "🌐 Starting Complete Content Automation Studio..."
 echo "🎯 Features: Trends Analysis, AI Content, Video Production, Storage, Publishing"
-python app.py
+
+echo "🐍 Testing Python import..."
+python -c "print('Python works')"
+
+echo "📦 Testing Flask import..."
+python -c "import flask; print(f'Flask version: {flask.__version__}')"
+
+echo "🚀 Starting Flask app..."
+python app.py 2>&1 | tee /tmp/startup.log

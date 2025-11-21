@@ -181,10 +181,45 @@
                 <canvas id="topicChart" width="400" height="200"></canvas>
             </section>
 
-            <!-- 사용자 관리 테이블 -->
+            <!-- 승인 대기 사용자 -->
             <section class="chart-container">
                 <div class="chart-header">
-                    <h3><i class="fas fa-users-cog"></i> 사용자 관리</h3>
+                    <h3><i class="fas fa-user-clock"></i> 승인 대기 사용자</h3>
+                    <div>
+                        <span class="badge badge-warning" id="pendingCount">0명 대기</span>
+                        <button class="btn btn-primary" onclick="loadPendingUsers()">
+                            <i class="fas fa-sync"></i> 새로고침
+                        </button>
+                    </div>
+                </div>
+
+                <div id="pendingUsersContainer" style="overflow-x: auto;">
+                    <table class="user-table" id="pendingUsersTable" style="display: none;">
+                        <thead>
+                            <tr>
+                                <th>사용자</th>
+                                <th>GitHub ID</th>
+                                <th>이메일</th>
+                                <th>가입일</th>
+                                <th>상태</th>
+                                <th>승인/거절</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pendingUsersBody">
+                            <!-- 승인 대기 사용자 데이터 -->
+                        </tbody>
+                    </table>
+                    <div id="noPendingUsers" style="text-align: center; padding: 20px; color: #666;">
+                        <i class="fas fa-check-circle" style="font-size: 48px; color: #28a745; margin-bottom: 10px; display: block;"></i>
+                        승인 대기 중인 사용자가 없습니다.
+                    </div>
+                </div>
+            </section>
+
+            <!-- 전체 사용자 관리 테이블 -->
+            <section class="chart-container">
+                <div class="chart-header">
+                    <h3><i class="fas fa-users-cog"></i> 전체 사용자 관리</h3>
                     <button class="btn btn-primary" onclick="refreshUserData()">
                         <i class="fas fa-sync"></i> 새로고침
                     </button>
@@ -412,14 +447,144 @@
             }, 3000);
         }
 
+        // 승인 대기 사용자 로드
+        async function loadPendingUsers() {
+            try {
+                const response = await fetch('/api/approval/pending-users');
+                const data = await response.json();
+
+                if (data.success) {
+                    displayPendingUsers(data.users);
+                    document.getElementById('pendingCount').textContent = `${data.users.length}명 대기`;
+                } else {
+                    console.error('Failed to load pending users:', data.error);
+                }
+            } catch (error) {
+                console.error('Error loading pending users:', error);
+            }
+        }
+
+        function displayPendingUsers(users) {
+            const tbody = document.getElementById('pendingUsersBody');
+            const table = document.getElementById('pendingUsersTable');
+            const noUsers = document.getElementById('noPendingUsers');
+
+            if (users.length === 0) {
+                table.style.display = 'none';
+                noUsers.style.display = 'block';
+                tbody.innerHTML = '';
+            } else {
+                table.style.display = 'table';
+                noUsers.style.display = 'none';
+
+                tbody.innerHTML = users.map(user => `
+                    <tr>
+                        <td>
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <img src="${user.avatar_url || '/static/img/default-avatar.png'}"
+                                     alt="${user.name}"
+                                     style="width: 32px; height: 32px; border-radius: 50%; border: 1px solid #ddd;">
+                                <div>
+                                    <div style="font-weight: 500;">${user.name}</div>
+                                    <div style="font-size: 0.8rem; color: #666;">@${user.username}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td><code>${user.github_id}</code></td>
+                        <td>${user.email || 'N/A'}</td>
+                        <td>${new Date().toLocaleDateString()}</td>
+                        <td>
+                            <span class="badge badge-warning">승인 대기</span>
+                        </td>
+                        <td>
+                            <div class="approval-buttons">
+                                <button class="btn-approve" onclick="approveUser('${user.github_id}', '${user.name}')">
+                                    <i class="fas fa-check"></i> 승인
+                                </button>
+                                <button class="btn-reject" onclick="rejectUser('${user.github_id}', '${user.name}')">
+                                    <i class="fas fa-times"></i> 거절
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `).join('');
+            }
+        }
+
+        async function approveUser(githubId, userName) {
+            if (!confirm(`${userName}님을 승인하시겠습니까?`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/approval/approve-user', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        github_id: githubId
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showToast(data.message, 'success');
+                    loadPendingUsers(); // 목록 새로고침
+                } else {
+                    showToast('승인 실패: ' + data.error, 'error');
+                }
+            } catch (error) {
+                console.error('Error approving user:', error);
+                showToast('승인 중 오류가 발생했습니다.', 'error');
+            }
+        }
+
+        async function rejectUser(githubId, userName) {
+            const reason = prompt(`${userName}님을 거절하시겠습니까? (사유를 입력해주세요)`);
+            if (!reason) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/approval/reject-user', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        github_id: githubId,
+                        reason: reason
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showToast(data.message, 'success');
+                    loadPendingUsers(); // 목록 새로고침
+                } else {
+                    showToast('거절 실패: ' + data.error, 'error');
+                }
+            } catch (error) {
+                console.error('Error rejecting user:', error);
+                showToast('거절 중 오류가 발생했습니다.', 'error');
+            }
+        }
+
         // 페이지 로드 시 초기화
         document.addEventListener('DOMContentLoaded', function() {
             loadStats();
             loadUsers();
             initCharts();
+            loadPendingUsers(); // 승인 대기 사용자 로드
 
             // 30초마다 통계 새로고침
             setInterval(loadStats, 30000);
+
+            // 1분마다 승인 대기 사용자 새로고침
+            setInterval(loadPendingUsers, 60000);
         });
     </script>
 </body>

@@ -171,14 +171,25 @@ def init_oauth(app):
             session['user_data'] = user_data
             session['access_token'] = token
 
-            # User 객체 생성 및 데이터베이스 저장
+            # 허용된 사용자 목록 (필요시 주석 해제)
+        # ALLOWED_USERS = ['mon664', 'specific_user1', 'specific_user2']  # 허용할 GitHub ID 목록
+        # if user_data['login'] not in ALLOWED_USERS:
+        #     logger.warning(f"Unauthorized user attempted login: {user_data['login']}")
+        #     return redirect(url_for('index') + '?error=unauthorized')
+
+        # User 객체 생성 및 데이터베이스 저장
             user = User(user_data)
             user.save_to_database()  # 데이터베이스에 저장
+
+            # 승인 상태 확인
+            if not user.is_approved():
+                logger.info(f"Pending user attempted login: {user.username}")
+                return redirect(url_for('index') + '?status=pending_approval')
 
             # Flask-Login으로 로그인
             login_user(user)
 
-            logger.info(f"User logged in and saved to database: {user.username}")
+            logger.info(f"Approved user logged in: {user.username}")
 
             # 로그인 후 메인 페이지로 리디렉션
             return redirect(url_for('index'))

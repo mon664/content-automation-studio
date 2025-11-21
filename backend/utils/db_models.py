@@ -37,6 +37,7 @@ class DatabaseManager:
                     avatar_url TEXT,
                     name TEXT,
                     webdav_config TEXT,  -- JSON 형식으로 저장
+                    status TEXT DEFAULT 'pending',  -- pending, approved, rejected
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     last_login TIMESTAMP,
                     is_active BOOLEAN DEFAULT 1
@@ -122,13 +123,15 @@ class User:
     """사용자 모델"""
 
     def __init__(self, github_id: str, username: str, email: str = None,
-                 avatar_url: str = None, name: str = None, webdav_config: Dict = None):
+                 avatar_url: str = None, name: str = None, webdav_config: Dict = None,
+                 status: str = 'pending'):
         self.github_id = github_id
         self.username = username
         self.email = email
         self.avatar_url = avatar_url
         self.name = name or username
         self.webdav_config = webdav_config or {}
+        self.status = status  # pending, approved, rejected
 
     def save_to_db(self, db: DatabaseManager) -> int:
         """데이터베이스에 사용자 저장"""
@@ -146,18 +149,18 @@ class User:
                 cursor.execute('''
                     UPDATE users
                     SET username = ?, email = ?, avatar_url = ?, name = ?,
-                        webdav_config = ?, last_login = CURRENT_TIMESTAMP
+                        webdav_config = ?, status = ?, last_login = CURRENT_TIMESTAMP
                     WHERE github_id = ?
                 ''', (self.username, self.email, self.avatar_url, self.name,
-                      webdav_json, self.github_id))
+                      webdav_json, self.status, self.github_id))
                 return existing[0]
             else:
-                # 새 사용자 생성
+                # 새 사용자 생성 (기본값은 pending)
                 cursor.execute('''
-                    INSERT INTO users (github_id, username, email, avatar_url, name, webdav_config)
-                    VALUES (?, ?, ?, ?, ?, ?)
+                    INSERT INTO users (github_id, username, email, avatar_url, name, webdav_config, status)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
                 ''', (self.github_id, self.username, self.email, self.avatar_url,
-                      self.name, webdav_json))
+                      self.name, webdav_json, self.status))
                 return cursor.lastrowid
 
     @classmethod
@@ -166,7 +169,7 @@ class User:
         with sqlite3.connect(db.db_path) as conn:
             cursor = conn.cursor()
             cursor.execute('''
-                SELECT github_id, username, email, avatar_url, name, webdav_config
+                SELECT github_id, username, email, avatar_url, name, webdav_config, status
                 FROM users WHERE github_id = ?
             ''', (github_id,))
 
@@ -179,7 +182,8 @@ class User:
                     email=row[2],
                     avatar_url=row[3],
                     name=row[4],
-                    webdav_config=webdav_config
+                    webdav_config=webdav_config,
+                    status=row[6]
                 )
         return None
 
@@ -205,6 +209,82 @@ class User:
                     webdav_config=webdav_config
                 )
         return None
+
+    def approve_user(self, db: DatabaseManager):
+        """사용자 승인"""
+        with sqlite3.connect(db.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                UPDATE users SET status = 'approved' WHERE github_id = ?
+            ''', (self.github_id,))
+            self.status = 'approved'
+            conn.commit()
+
+    def reject_user(self, db: DatabaseManager):
+        """사용자 거절"""
+        with sqlite3.connect(db.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                UPDATE users SET status = 'rejected' WHERE github_id = ?
+            ''', (self.github_id,))
+            self.status = 'rejected'
+            conn.commit()
+
+    @classmethod
+    def get_pending_users(cls, db: DatabaseManager) -> List['User']:
+        """승인 대기 중인 사용자 목록"""
+        with sqlite3.connect(db.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT github_id, username, email, avatar_url, name, webdav_config, status
+                FROM users WHERE status = 'pending'
+                ORDER BY created_at ASC
+            ''')
+
+            users = []
+            for row in cursor.fetchall():
+                webdav_config = json.loads(row[5]) if row[5] else {}
+                user = cls(
+                    github_id=row[0],
+                    username=row[1],
+                    email=row[2],
+                    avatar_url=row[3],
+                    name=row[4],
+                    webdav_config=webdav_config,
+                    status=row[6]
+                )
+                users.append(user)
+            return users
+
+    @classmethod
+    def get_approved_users(cls, db: DatabaseManager) -> List['User']:
+        """승인된 사용자 목록"""
+        with sqlite3.connect(db.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT github_id, username, email, avatar_url, name, webdav_config, status
+                FROM users WHERE status = 'approved'
+                ORDER BY created_at DESC
+            ''')
+
+            users = []
+            for row in cursor.fetchall():
+                webdav_config = json.loads(row[5]) if row[5] else {}
+                user = cls(
+                    github_id=row[0],
+                    username=row[1],
+                    email=row[2],
+                    avatar_url=row[3],
+                    name=row[4],
+                    webdav_config=webdav_config,
+                    status=row[6]
+                )
+                users.append(user)
+            return users
+
+    def is_approved(self) -> bool:
+        """승인된 사용자인지 확인"""
+        return self.status == 'approved'
 
 class Content:
     """콘텐츠 모델"""

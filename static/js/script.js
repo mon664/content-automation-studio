@@ -195,6 +195,8 @@ async function checkAuthStatus() {
 
         if (data.authenticated && data.user) {
             showUserProfile(data.user);
+            // 승인 상태 확인
+            checkUserApprovalStatus();
         } else {
             showLoginButton();
         }
@@ -219,6 +221,116 @@ function showUserProfile(user) {
     }
 
     console.log(`User logged in: ${user.name || user.username}`);
+}
+
+// 사용자 승인 상태 확인
+async function checkUserApprovalStatus() {
+    try {
+        const response = await fetch('/api/approval/user-status');
+        const data = await response.json();
+
+        if (data.authenticated && data.status === 'pending') {
+            // 승인 대기 상태인 경우
+            showPendingApprovalMessage();
+        } else if (data.authenticated && !data.is_approved) {
+            // 거절된 경우
+            showRejectedMessage();
+        }
+    } catch (error) {
+        console.error('Failed to check user approval status:', error);
+    }
+}
+
+function showPendingApprovalMessage() {
+    const userProfile = document.getElementById('user-profile');
+    if (userProfile) {
+        userProfile.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <i class="fas fa-clock" style="color: #ffc107;"></i>
+                <span style="font-size: 14px;">승인 대기 중</span>
+            </div>
+        `;
+    }
+
+    // 알림 메시지 표시
+    const existingAlert = document.querySelector('.approval-alert');
+    if (!existingAlert) {
+        const alert = document.createElement('div');
+        alert.className = 'approval-alert';
+        alert.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 15px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 10000;
+            max-width: 300px;
+            font-size: 14px;
+        `;
+        alert.innerHTML = `
+            <h4 style="margin: 0 0 10px 0; color: #856404;">
+                <i class="fas fa-clock"></i> 승인 대기 중
+            </h4>
+            <p style="margin: 0;">
+                관리자의 승인을 기다리고 있습니다.<br>
+                승인이 완료되면 서비스를 이용할 수 있습니다.
+            </p>
+        `;
+        document.body.appendChild(alert);
+
+        // 10초 후 자동 제거
+        setTimeout(() => {
+            if (alert.parentNode) {
+                alert.parentNode.removeChild(alert);
+            }
+        }, 10000);
+    }
+}
+
+function showRejectedMessage() {
+    const userProfile = document.getElementById('user-profile');
+    if (userProfile) {
+        userProfile.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <i class="fas fa-times-circle" style="color: #dc3545;"></i>
+                <span style="font-size: 14px;">승인 거절</span>
+            </div>
+        `;
+    }
+
+    const existingAlert = document.querySelector('.approval-alert');
+    if (!existingAlert) {
+        const alert = document.createElement('div');
+        alert.className = 'approval-alert';
+        alert.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+            padding: 15px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 10000;
+            max-width: 300px;
+            font-size: 14px;
+        `;
+        alert.innerHTML = `
+            <h4 style="margin: 0 0 10px 0; color: #721c24;">
+                <i class="fas fa-times-circle"></i> 승인 거절
+            </h4>
+            <p style="margin: 0;">
+                귀하의 가입 신청이 거절되었습니다.<br>
+                관리자에게 문의하세요.
+            </p>
+        `;
+        document.body.appendChild(alert);
+    }
 }
 
 // 로그인 버튼 표시

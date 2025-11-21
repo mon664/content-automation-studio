@@ -5,7 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI 콘텐츠 생성 - Content Automation Studio</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/editor.css') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.quilljs.com/1.3.6/quill.snow.css">
     <style>
         .content-container {
             max-width: 1200px;
@@ -800,17 +802,16 @@
                 </div>
 
                 <div class="content-preview">
-                    <h4>✍️ AI 자동 개선 블로그 글</h4>
-                    <div style="background: white; padding: 20px; border-radius: 8px; line-height: 1.8; white-space: pre-line; position: relative;">
-                        ${result.metadata.ai_enhanced ? '<div style="position: absolute; top: -10px; right: 10px; background: #27ae60; color: white; padding: 5px 10px; border-radius: 15px; font-size: 12px; font-weight: 600;">AI Enhanced</div>' : ''}
-                        ${result.content}
-                    </div>
-                    <div style="display: flex; gap: 10px; margin-top: 15px;">
-                        <button class="copy-btn" onclick="copyToClipboard('${result.content.replace(/'/g, "\\'")}')">
-                            <i class="fas fa-copy"></i> 복사
+                    <h4>✍️ AI 생성 콘텐츠 편집</h4>
+                    <div class="editor-actions" style="margin-bottom: 15px;">
+                        <button class="action-btn btn-preview" onclick="openEditor('${result.title.replace(/`/g, '\\`')}', '${result.content.replace(/`/g, '\\`')}', '${result.metadata ? JSON.stringify(result.metadata).replace(/"/g, '\\"') : '{}')')">
+                            <i class="fas fa-edit"></i> 편집기 열기
+                        </button>
+                        <button class="action-btn btn-draft" onclick="copyToClipboard('${result.content.replace(/'/g, "\\'")}')">
+                            <i class="fas fa-copy"></i> 원본 복사
                         </button>
                         <button class="publish-btn" onclick="preparePublishContent(\`${result.title.replace(/`/g, '\\`')}\`, \`${result.content.replace(/`/g, '\\`')}\`)">
-                            <i class="fas fa-paper-plane"></i> 발행하기
+                            <i class="fas fa-paper-plane"></i> 바로 발행
                         </button>
                         <button class="schedule-btn" onclick="prepareScheduleContent(\`${result.title.replace(/`/g, '\\`')}\`, \`${result.content.replace(/`/g, '\\`')}\`)">
                             <i class="fas fa-clock"></i> 예약 발행
@@ -962,6 +963,78 @@
             window.location.href = '/publishing';
         }
 
+        // 리치 텍스트 편집기 열기 함수
+        function openEditor(title, content, metadata) {
+            // 편집기 모달 생성
+            const modal = document.createElement('div');
+            modal.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0,0,0,0.8);
+                z-index: 10000;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            `;
+
+            const modalContent = document.createElement('div');
+            modalContent.style.cssText = `
+                background: white;
+                border-radius: 15px;
+                width: 90%;
+                max-width: 1200px;
+                height: 90vh;
+                display: flex;
+                flex-direction: column;
+                box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+                overflow: hidden;
+            `;
+
+            modalContent.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 20px; border-bottom: 2px solid #e9ecef; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                    <h3 style="margin: 0; font-size: 1.5rem;">
+                        <i class="fas fa-edit"></i> AI 콘텐츠 편집기
+                    </h3>
+                    <button onclick="this.closest('.editor-modal').remove()" style="background: rgba(255,255,255,0.2); border: none; color: white; padding: 8px 15px; border-radius: 8px; cursor: pointer; font-size: 18px;">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div style="flex: 1; overflow: hidden;">
+                    <div id="richEditorContainer" style="width: 100%; height: 100%;"></div>
+                </div>
+                <div style="padding: 20px; border-top: 2px solid #e9ecef; background: #f8f9fa; display: flex; gap: 15px; justify-content: flex-end;">
+                    <button onclick="editor.saveDraft()" style="background: linear-gradient(45deg, #95a5a6, #7f8c8d); color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-weight: 600;">
+                        <i class="fas fa-save"></i> 임시저장
+                    </button>
+                    <button onclick="editor.publishContent()" style="background: linear-gradient(45deg, #3498db, #2980b9); color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-weight: 600;">
+                        <i class="fas fa-paper-plane"></i> 발행하기
+                    </button>
+                </div>
+            `;
+
+            modal.appendChild(modalContent);
+            modal.className = 'editor-modal';
+            document.body.appendChild(modal);
+
+            // 리치 텍스트 편집기 초기화
+            setTimeout(() => {
+                if (typeof editor !== 'undefined') {
+                    editor.destroy();
+                }
+
+                editor = new RichTextEditor('richEditorContainer');
+
+                // AI 생성 콘텐츠 설정
+                editor.setAIContent(title, content);
+
+                // 임시저장된 콘텐츠 로드
+                editor.loadDraft();
+            }, 100);
+        }
+
         // 콘텐츠 예약 발행 준비 함수
         function prepareScheduleContent(title, content) {
             // 스케줄러 페이지로 이동하며 데이터 전달
@@ -988,5 +1061,8 @@
             document.getElementById('results').style.display = 'block';
         }
     </script>
+
+    <!-- Rich Text Editor -->
+    <script src="{{ url_for('static', filename='js/editor.js') }}"></script>
 </body>
 </html>

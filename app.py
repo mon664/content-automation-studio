@@ -79,7 +79,7 @@ def health_check():
 from modules import trends, content, video, publisher, storage, scheduler
 
 # Analytics 백엔드 임포트
-from backend.routes import analytics, editor
+from backend.routes import analytics, editor, admin
 
 # GitHub OAuth 초기화 - 임시로 비활성화
 # github_oauth = auth.init_oauth(app)
@@ -94,6 +94,7 @@ app.register_blueprint(storage.storage_bp, url_prefix='/api/storage')
 app.register_blueprint(scheduler.scheduler_bp, url_prefix='/api/scheduler')
 app.register_blueprint(analytics.analytics_bp)  # 성과 분석 API 활성화
 app.register_blueprint(editor.editor_bp)       # 에디터 전용 API 활성화
+app.register_blueprint(admin.admin_bp)         # 관리자 패널 API 활성화
 
 # 페이지 라우트
 @app.route('/trends')
@@ -123,6 +124,10 @@ def scheduler_page():
 @app.route('/analytics')
 def analytics_page():
     return render_template('analytics.html')
+
+@app.route('/admin')
+def admin_page():
+    return render_template('admin.html')
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))

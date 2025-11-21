@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>관리자 패널 - Content Automation Studio</title>
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Simple Styles -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+    <!-- Admin Panel CSS -->
+    <style>
+        .admin-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            transition: transform 0.2s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .stat-card h3 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+            font-size: 1rem;
+            opacity: 0.8;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+
+        .stat-change {
+            font-size: 0.9rem;
+            color: #28a745;
+        }
+
+        .stat-change.negative {
+            color: #dc3545;
+        }
+
+        .chart-container {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            margin: 20px 0;
+        }
+
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .user-table {
+            width: 100%;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .user-table th,
+        .user-table td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .user-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .user-table tr:hover {
+            background: #f8f9fa;
+        }
+
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .status-active {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-inactive {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-sm {
+            padding: 4px 8px;
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1><i class="fas fa-cogs"></i> 관리자 패널</h1>
+            <p>Content Automation Studio 시스템 관리</p>
+        </header>
+
+        <main>
+            <!-- 통계 카드 -->
+            <section class="admin-grid">
+                <div class="stat-card">
+                    <h3><i class="fas fa-users"></i> 총 사용자</h3>
+                    <div class="stat-value" id="totalUsers">0</div>
+                    <div class="stat-change">+12.5% 지난 7일</div>
+                </div>
+
+                <div class="stat-card">
+                    <h3><i class="fas fa-file-alt"></i> 생성된 콘텐츠</h3>
+                    <div class="stat-value" id="totalContent">0</div>
+                    <div class="stat-change">+28.3% 지난 7일</div>
+                </div>
+
+                <div class="stat-card">
+                    <h3><i class="fas fa-images"></i> 생성된 이미지</h3>
+                    <div class="stat-value" id="totalImages">0</div>
+                    <div class="stat-change">+45.1% 지난 7일</div>
+                </div>
+
+                <div class="stat-card">
+                    <h3><i class="fas fa-server"></i> 시스템 상태</h3>
+                    <div class="stat-value" style="color: #28a745;">정상</div>
+                    <div class="stat-change">99.9% 가동률</div>
+                </div>
+            </section>
+
+            <!-- 차트 섹션 -->
+            <section class="chart-container">
+                <div class="chart-header">
+                    <h3><i class="fas fa-chart-line"></i> 콘텐츠 생성 추이</h3>
+                    <div class="chart-controls">
+                        <button class="btn btn-sm btn-primary" onclick="updateChart('7d')">7일</button>
+                        <button class="btn btn-sm btn-secondary" onclick="updateChart('30d')">30일</button>
+                        <button class="btn btn-sm btn-secondary" onclick="updateChart('90d')">90일</button>
+                    </div>
+                </div>
+                <canvas id="contentChart" width="400" height="100"></canvas>
+            </section>
+
+            <section class="chart-container">
+                <div class="chart-header">
+                    <h3><i class="fas fa-chart-pie"></i> 인기 토픽 분석</h3>
+                </div>
+                <canvas id="topicChart" width="400" height="200"></canvas>
+            </section>
+
+            <!-- 사용자 관리 테이블 -->
+            <section class="chart-container">
+                <div class="chart-header">
+                    <h3><i class="fas fa-users-cog"></i> 사용자 관리</h3>
+                    <button class="btn btn-primary" onclick="refreshUserData()">
+                        <i class="fas fa-sync"></i> 새로고침
+                    </button>
+                </div>
+
+                <div style="overflow-x: auto;">
+                    <table class="user-table">
+                        <thead>
+                            <tr>
+                                <th>사용자 ID</th>
+                                <th>이름</th>
+                                <th>가입일</th>
+                                <th>콘텐츠 수</th>
+                                <th>상태</th>
+                                <th>액션</th>
+                            </tr>
+                        </thead>
+                        <tbody id="userTableBody">
+                            <!-- 사용자 데이터가 여기에 로드됩니다 -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- 시스템 정보 -->
+            <section class="admin-grid">
+                <div class="stat-card">
+                    <h3><i class="fas fa-microchip"></i> AI API 상태</h3>
+                    <div class="stat-value" style="color: #28a745;">정상</div>
+                    <div class="stat-change">Gemini, Vertex AI 활성화</div>
+                </div>
+
+                <div class="stat-card">
+                    <h3><i class="fas fa-hdd"></i> 스토리지 사용량</h3>
+                    <div class="stat-value">2.4GB</div>
+                    <div class="stat-change">20GB 중 12% 사용</div>
+                </div>
+
+                <div class="stat-card">
+                    <h3><i class="fas fa-tachometer-alt"></i> 평균 응답 시간</h3>
+                    <div class="stat-value">1.2s</div>
+                    <div class="stat-change">-0.3s 개선</div>
+                </div>
+
+                <div class="stat-card">
+                    <h3><i class="fas fa-robot"></i> 일일 생성량</h3>
+                    <div class="stat-value" id="dailyGenerations">0</div>
+                    <div class="stat-change">오늘 생성된 콘텐츠</div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        // 통계 데이터 로드
+        async function loadStats() {
+            try {
+                // 실제 API 구현 시 데이터 가져오기
+                // const response = await fetch('/api/admin/stats');
+                // const stats = await response.json();
+
+                // 임시 데이터
+                const stats = {
+                    totalUsers: 127,
+                    totalContent: 892,
+                    totalImages: 2341,
+                    dailyGenerations: 34
+                };
+
+                // 통계 표시
+                document.getElementById('totalUsers').textContent = stats.totalUsers.toLocaleString();
+                document.getElementById('totalContent').textContent = stats.totalContent.toLocaleString();
+                document.getElementById('totalImages').textContent = stats.totalImages.toLocaleString();
+                document.getElementById('dailyGenerations').textContent = stats.dailyGenerations.toLocaleString();
+
+            } catch (error) {
+                console.error('Failed to load stats:', error);
+            }
+        }
+
+        // 사용자 데이터 로드
+        async function loadUsers() {
+            try {
+                // 실제 API 구현 시 데이터 가져오기
+                // const response = await fetch('/api/admin/users');
+                // const users = await response.json();
+
+                // 임시 데이터
+                const users = [
+                    { id: 'user001', name: '김민준', joinDate: '2024-01-15', contentCount: 45, status: 'active' },
+                    { id: 'user002', name: '이서연', joinDate: '2024-01-18', contentCount: 23, status: 'active' },
+                    { id: 'user003', name: '박준호', joinDate: '2024-01-22', contentCount: 67, status: 'active' },
+                    { id: 'user004', name: '정지우', joinDate: '2024-02-01', contentCount: 12, status: 'inactive' },
+                    { id: 'user005', name: '최현우', joinDate: '2024-02-05', contentCount: 89, status: 'active' }
+                ];
+
+                const tbody = document.getElementById('userTableBody');
+                tbody.innerHTML = users.map(user => `
+                    <tr>
+                        <td>${user.id}</td>
+                        <td>${user.name}</td>
+                        <td>${user.joinDate}</td>
+                        <td>${user.contentCount}</td>
+                        <td>
+                            <span class="status-badge status-${user.status}">
+                                ${user.status === 'active' ? '활성' : '비활성'}
+                            </span>
+                        </td>
+                        <td>
+                            <div class="action-buttons">
+                                <button class="btn btn-sm btn-info" onclick="viewUser('${user.id}')">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                <button class="btn btn-sm btn-warning" onclick="editUser('${user.id}')">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `).join('');
+
+            } catch (error) {
+                console.error('Failed to load users:', error);
+            }
+        }
+
+        // 차트 초기화
+        function initCharts() {
+            // 콘텐츠 생성 추이 차트
+            const contentCtx = document.getElementById('contentChart').getContext('2d');
+            window.contentChart = new Chart(contentCtx, {
+                type: 'line',
+                data: {
+                    labels: ['월', '화', '수', '목', '금', '토', '일'],
+                    datasets: [{
+                        label: '콘텐츠 생성',
+                        data: [12, 19, 23, 17, 29, 33, 21],
+                        borderColor: '#667eea',
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+
+            // 인기 토픽 차트
+            const topicCtx = document.getElementById('topicChart').getContext('2d');
+            window.topicChart = new Chart(topicCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['음식', '여행', 'IT', '패션', '건강', '기타'],
+                    datasets: [{
+                        data: [35, 25, 15, 12, 8, 5],
+                        backgroundColor: [
+                            '#667eea',
+                            '#764ba2',
+                            '#f093fb',
+                            '#f5576c',
+                            '#4facfe',
+                            '#43e97b'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'right'
+                        }
+                    }
+                }
+            });
+        }
+
+        // 차트 업데이트
+        function updateChart(period) {
+            // 버튼 스타일 업데이트
+            document.querySelectorAll('.chart-controls button').forEach(btn => {
+                btn.classList.remove('btn-primary');
+                btn.classList.add('btn-secondary');
+            });
+            event.target.classList.remove('btn-secondary');
+            event.target.classList.add('btn-primary');
+
+            // 실제 구현 시 API 호출로 데이터 업데이트
+            console.log(`Updating chart for period: ${period}`);
+        }
+
+        // 사용자 관리 함수
+        function viewUser(userId) {
+            showToast(`사용자 ${userId} 정보 보기`, 'info');
+        }
+
+        function editUser(userId) {
+            showToast(`사용자 ${userId} 편집`, 'info');
+        }
+
+        function refreshUserData() {
+            loadUsers();
+            showToast('사용자 데이터를 새로고쳤습니다.', 'success');
+        }
+
+        // Toast 알림
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+
+            setTimeout(() => {
+                toast.remove();
+            }, 3000);
+        }
+
+        // 페이지 로드 시 초기화
+        document.addEventListener('DOMContentLoaded', function() {
+            loadStats();
+            loadUsers();
+            initCharts();
+
+            // 30초마다 통계 새로고침
+            setInterval(loadStats, 30000);
+        });
+    </script>
+</body>
+</html>

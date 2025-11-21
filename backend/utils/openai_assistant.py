@@ -8,23 +8,30 @@ import time
 import requests
 from typing import Dict, List, Optional, Tuple
 import logging
+import os
+import google.generativeai as genai
 
 logger = logging.getLogger(__name__)
 
+# Gemini API 설정
 try:
-    from utils.gemini_client import gemini_client
-except ImportError:
-    logger.warning("Gemini client not available")
-    gemini_client = None
+    genai.configure(api_key=os.getenv('GEMINI_API_KEY', 'AIzaSyBlxBK-1-vl-Uzy5Vys9tLPQynRhGk30UY'))
+    model = genai.GenerativeModel('gemini-pro')
+    GEMINI_AVAILABLE = True
+    logger.info("Gemini API initialized successfully")
+except Exception as e:
+    logger.error(f"Gemini API initialization failed: {e}")
+    GEMINI_AVAILABLE = False
+    model = None
 
 class GeminiBlogAssistant:
     """Gemini API를 활용한 전문 블로그 생성 시스템"""
 
     def __init__(self):
         """Gemini Assistant 초기화"""
-        if not gemini_client:
-            raise Exception("Gemini client를 사용할 수 없습니다.")
-        self.client = gemini_client
+        if not GEMINI_AVAILABLE:
+            raise Exception("Gemini API를 사용할 수 없습니다.")
+        self.model = model
 
     def generate_blog_post(self, keyword: str, platform: str = "general",
                           style: str = "professional") -> Dict[str, str]:
@@ -65,7 +72,7 @@ class GeminiBlogAssistant:
 
         full_prompt = f"{system_prompt}\n\n{user_prompt}"
 
-        response = self.client.generate_content(full_prompt)
+        response = self.model.generate_content(full_prompt)
         return response.text
 
     def _create_system_prompt(self, platform: str, style: str) -> str:
@@ -150,7 +157,7 @@ slug: [URL-friendly slug, 영문 소문자와 하이픈만 사용]
 - 코드블록 없이 바로 HTML 출력
 """
 
-            response = self.client.generate_content(prompt)
+            response = self.model.generate_content(prompt)
             result = response.text
             # 코드블록 제거
             result = re.sub(r'```html|```', '', result).strip()
@@ -180,7 +187,7 @@ slug: [URL-friendly slug, 영문 소문자와 하이픈만 사용]
 - HTML 코드블록 형태로 출력
 """
 
-            response = self.client.generate_content(prompt)
+            response = self.model.generate_content(prompt)
             result = response.text
             result = re.sub(r'```html|```', '', result).strip()
 
@@ -209,7 +216,7 @@ slug: [URL-friendly slug, 영문 소문자와 하이픈만 사용]
 - 설명 없이 제목만 출력
 """
 
-            response = self.client.generate_content(prompt)
+            response = self.model.generate_content(prompt)
             result = response.text
             result = re.sub(r'```html|```', '', result).strip()
 
@@ -237,7 +244,7 @@ slug: [URL-friendly slug, 영문 소문자와 하이픈만 사용]
 - 코드블록 없이 바로 HTML 출력
 """
 
-            response = self.client.generate_content(prompt)
+            response = self.model.generate_content(prompt)
             result = response.text
             result = re.sub(r'```html|```', '', result).strip()
 

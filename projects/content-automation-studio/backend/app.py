@@ -3,6 +3,7 @@ from flask_cors import CORS
 import os
 from datetime import datetime
 import uuid
+import sys
 
 app = Flask(__name__)
 CORS(app)
@@ -58,7 +59,29 @@ def check_google_ai_connection():
         return False
 
 # API 라우트 임포트
-from routes import content, video, trends, publisher, auth
+try:
+    from routes import content, video, trends, publisher, auth
+except ImportError as e:
+    print(f"❌ 라우트 임포트 실패: {e}")
+    print(f"현재 디렉토리: {os.getcwd()}")
+    print(f"Python 경로: {sys.path}")
+
+    # 개별 라우트 직접 임포트 시도
+    try:
+        import routes.content as content
+        import routes.video as video
+        import routes.trends as trends
+        import routes.publisher as publisher
+        import routes.auth as auth
+    except ImportError as route_error:
+        print(f"❌ 개별 라우트 임포트 실패: {route_error}")
+        # 기본 라우트만 등록
+        content = None
+        video = None
+        trends = None
+        publisher = None
+        auth = None
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    port = int(os.environ.get('PORT', 5000))
+    app.run(debug=False, host='0.0.0.0', port=port)

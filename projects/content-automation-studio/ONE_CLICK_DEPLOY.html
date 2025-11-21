@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Content Automation Studio - One Click Deploy</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; }
+        .container { max-width: 800px; margin: 0 auto; background: white; border-radius: 10px; padding: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+        h1 { color: #333; text-align: center; margin-bottom: 30px; }
+        .step { background: #f8f9fa; border-left: 4px solid #007bff; padding: 20px; margin: 20px 0; border-radius: 5px; }
+        .step h3 { color: #007bff; margin-top: 0; }
+        .btn { display: inline-block; background: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; margin: 5px; font-weight: bold; }
+        .btn:hover { background: #0056b3; }
+        .success { background: #d4edda; border-color: #28a745; color: #155724; }
+        .env-var { background: #f1f3f4; padding: 10px; border-radius: 5px; font-family: monospace; margin: 5px 0; }
+        .status { padding: 15px; border-radius: 5px; margin: 10px 0; }
+        .checking { background: #fff3cd; color: #856404; }
+        .done { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .countdown { font-size: 24px; font-weight: bold; color: #007bff; text-align: center; margin: 20px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Content Automation Studio</h1>
+        <h2 style="text-align: center; color: #666;">원클릭 배포 가이드</h2>
+
+        <!-- Step 1: GitHub Repository -->
+        <div class="step">
+            <h3>📁 1단계: GitHub 저장소 생성</h3>
+            <p>아래 버튼을 클릭하여 GitHub 저장소를 생성하세요:</p>
+            <a href="https://github.com/new" target="_blank" class="btn" onclick="openGitHubTab()">
+                📂 GitHub에서 새 저장소 생성
+            </a>
+            <div class="env-var">
+                <strong>저장소 정보:</strong><br>
+                이름: content-automation-studio<br>
+                설명: AI 기반 콘텐츠 자동 생성 및 발행 플랫폼<br>
+                공개 여부: Public ✓
+            </div>
+        </div>
+
+        <!-- Step 2: Railway Deploy -->
+        <div class="step">
+            <h3>🚂 2단계: Railway 배포</h3>
+            <p>GitHub 저장소를 생성했다면 아래 버튼을 클릭하여 Railway 배포를 시작하세요:</p>
+            <a href="https://railway.com/new" target="_blank" class="btn" onclick="openRailwayTab()">
+                ⚡ Railway에서 배포 시작
+            </a>
+            <div class="env-var">
+                <strong>배포 단계:</strong><br>
+                1. "Deploy from GitHub repo" 선택<br>
+                2. "content-automation-studio" 저장소 선택<br>
+                3. 아래 환경 변수 입력<br>
+                4. "Deploy" 클릭
+            </div>
+        </div>
+
+        <!-- Step 3: Environment Variables -->
+        <div class="step">
+            <h3>⚙️ 3단계: 환경 변수 설정</h3>
+            <p>Railway 프로젝트에 아래 환경 변수들을 복사하여 붙여넣으세요:</p>
+
+            <div class="env-var">
+                <strong>Google Cloud API:</strong><br>
+                GOOGLE_PROJECT_ID=content-automation-studio<br>
+                GOOGLE_LOCATION=us-central1<br>
+                GEMINI_API_KEY=AIzaSyBlxBK-1-vl-Uzy5Vys9tLPQynRhGk30UY<br>
+                VERTEX_AI_API_KEY=AQ.Ab8RN6LuBT_emr293bsy-BBxgLc9l9TOnYCz73uoc-uA1aBp4A
+            </div>
+
+            <div class="env-var">
+                <strong>WebDAV Configuration:</strong><br>
+                WEBDAV_URL=https://rausu.infini-cloud.net/dav<br>
+                WEBDAV_USERNAME=hhtsta<br>
+                WEBDAV_PASSWORD=RXYf3uYhCbL9Ezwa
+            </div>
+
+            <div class="env-var">
+                <strong>Flask Configuration:</strong><br>
+                SECRET_KEY=content-studio-secret-key-2024<br>
+                DEBUG=False<br>
+                PORT=5000
+            </div>
+
+            <button class="btn" onclick="copyAllEnvVars()">📋 모든 환경 변수 복사</button>
+        </div>
+
+        <!-- Step 4: Deployment Status -->
+        <div class="step">
+            <h3>📊 4단계: 배포 상태 확인</h3>
+            <div id="status" class="status checking">
+                ⏳ 배포 준비 중...
+            </div>
+
+            <div class="countdown" id="countdown" style="display: none;">
+                예상 배포 완료 시간: <span id="timer">5:00</span>
+            </div>
+
+            <div style="margin-top: 20px;">
+                <button class="btn" onclick="checkDeploymentStatus()">🔍 배포 상태 확인</button>
+                <button class="btn" onclick="openHealthCheck()">🏥 헬스 체크</button>
+            </div>
+        </div>
+
+        <!-- API Test Section -->
+        <div class="step success">
+            <h3>🧪 5단계: API 테스트</h3>
+            <p>배포 완료 후 아래 API를 테스트해보세요:</p>
+
+            <div class="env-var">
+                <strong>Health Check:</strong><br>
+                GET https://your-app-url.railway.app/api/health
+            </div>
+
+            <div class="env-var">
+                <strong>Content Generation:</strong><br>
+                POST https://your-app-url.railway.app/content/generate-blog<br>
+                Body: {"topic": "AI 기술 동향", "keywords": ["AI", "기술"]}
+            </div>
+
+            <button class="btn" onclick="testAPI()">🚀 API 테스트 시작</button>
+        </div>
+    </div>
+
+    <script>
+        let githubTab = null;
+        let railwayTab = null;
+        let countdownInterval = null;
+
+        function openGitHubTab() {
+            githubTab = window.open('https://github.com/new', '_blank');
+            updateStatus('📂 GitHub 저장소 생성 페이지를 열었습니다. 저장소를 생성하고 이 페이지로 돌아오세요.');
+        }
+
+        function openRailwayTab() {
+            railwayTab = window.open('https://railway.com/new', '_blank');
+            updateStatus('🚂 Railway 배포 페이지를 열었습니다. "Deploy from GitHub repo"를 선택하세요.');
+            startCountdown();
+        }
+
+        function copyAllEnvVars() {
+            const envVars = `GOOGLE_PROJECT_ID=content-automation-studio
+GOOGLE_LOCATION=us-central1
+GEMINI_API_KEY=AIzaSyBlxBK-1-vl-Uzy5Vys9tLPQynRhGk30UY
+VERTEX_AI_API_KEY=AQ.Ab8RN6LuBT_emr293bsy-BBxgLc9l9TOnYCz73uoc-uA1aBp4A
+WEBDAV_URL=https://rausu.infini-cloud.net/dav
+WEBDAV_USERNAME=hhtsta
+WEBDAV_PASSWORD=RXYf3uYhCbL9Ezwa
+SECRET_KEY=content-studio-secret-key-2024
+DEBUG=False
+PORT=5000`;
+
+            navigator.clipboard.writeText(envVars).then(() => {
+                alert('✅ 환경 변수가 클립보드에 복사되었습니다!');
+                updateStatus('📋 환경 변수가 복사되었습니다. Railway에 붙여넣으세요.');
+            });
+        }
+
+        function updateStatus(message, type = 'checking') {
+            const statusEl = document.getElementById('status');
+            statusEl.textContent = message;
+            statusEl.className = `status ${type}`;
+        }
+
+        function startCountdown() {
+            let minutes = 5;
+            let seconds = 0;
+
+            document.getElementById('countdown').style.display = 'block';
+
+            countdownInterval = setInterval(() => {
+                if (seconds === 0) {
+                    if (minutes === 0) {
+                        clearInterval(countdownInterval);
+                        updateStatus('✅ 배포가 완료되었을 가능성이 높습니다! 상태를 확인해보세요.', 'done');
+                        return;
+                    }
+                    minutes--;
+                    seconds = 59;
+                } else {
+                    seconds--;
+                }
+
+                document.getElementById('timer').textContent =
+                    `${minutes}:${seconds.toString().padStart(2, '0')}`;
+            }, 1000);
+        }
+
+        function checkDeploymentStatus() {
+            updateStatus('🔍 배포 상태를 확인하려면 Railway 대시보드에서 빌드 로그를 확인하세요.', 'checking');
+            if (railwayTab && !railwayTab.closed) {
+                railwayTab.focus();
+            } else {
+                window.open('https://railway.com/dashboard', '_blank');
+            }
+        }
+
+        function openHealthCheck() {
+            const url = prompt('배포된 앱 URL을 입력하세요 (예: https://my-app.railway.app):');
+            if (url) {
+                window.open(`${url}/api/health`, '_blank');
+            }
+        }
+
+        function testAPI() {
+            const url = prompt('배포된 앱 URL을 입력하세요 (예: https://my-app.railway.app):');
+            if (url) {
+                // Health check
+                fetch(`${url}/api/health`)
+                    .then(response => response.json())
+                    .then(data => {
+                        alert(`✅ API가 정상 작동합니다!\n\n${JSON.stringify(data, null, 2)}`);
+                    })
+                    .catch(error => {
+                        alert(`❌ API 테스트 실패: ${error.message}\n\n배포가 완료되었는지 확인하세요.`);
+                    });
+            }
+        }
+    </script>
+</body>
+</html>

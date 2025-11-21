@@ -293,6 +293,261 @@ header p {
     100% { transform: rotate(360deg); }
 }
 
+/* Toast UI Editor Modal Styles */
+.editor-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    z-index: 99999;
+    display: flex;
+    flex-direction: column;
+    animation: modalFadeIn 0.3s ease;
+}
+
+@keyframes modalFadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+.modal-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 20px 30px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.modal-header h3 {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.modal-header-buttons {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.modal-header .btn {
+    background: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    padding: 8px 12px;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+    color: white;
+    cursor: pointer;
+}
+
+.modal-header .btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: scale(1.05);
+}
+
+.modal-content {
+    flex: 1;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: white;
+}
+
+.modal-footer {
+    background: #f8f9fa;
+    padding: 15px 30px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    border-top: 1px solid #dee2e6;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+}
+
+.modal-footer-left {
+    display: flex;
+    gap: 10px;
+}
+
+.modal-footer-right {
+    display: flex;
+    gap: 10px;
+}
+
+/* Toast UI Editor Customization */
+#toastEditorContainer {
+    height: 100%;
+    min-height: 500px;
+}
+
+/* Toast UI Editor 스타일 오버라이드 */
+.editor-modal .toastui-editor-defaultUI {
+    border-radius: 0;
+    border: none;
+    box-shadow: none;
+    height: 100%;
+}
+
+.editor-modal .toastui-editor-toolbar {
+    background: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+    border-radius: 0;
+}
+
+.editor-modal .toastui-editor-md-preview,
+.editor-modal .toastui-editor-ww-container {
+    background: white;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.editor-modal .toastui-editor-md-preview {
+    padding: 20px;
+}
+
+.editor-modal .toastui-editor-contents {
+    font-size: 16px;
+    line-height: 1.7;
+}
+
+.editor-modal .toastui-editor-contents h1 {
+    color: #2c3e50;
+    font-size: 2rem;
+    margin: 20px 0 15px 0;
+    border-bottom: 2px solid #667eea;
+    padding-bottom: 10px;
+}
+
+.editor-modal .toastui-editor-contents h2 {
+    color: #34495e;
+    font-size: 1.5rem;
+    margin: 18px 0 12px 0;
+    border-bottom: 1px solid #ecf0f1;
+    padding-bottom: 8px;
+}
+
+.editor-modal .toastui-editor-contents h3 {
+    color: #2c3e50;
+    font-size: 1.25rem;
+    margin: 15px 0 10px 0;
+}
+
+.editor-modal .toastui-editor-contents p {
+    margin: 12px 0;
+    color: #34495e;
+}
+
+.editor-modal .toastui-editor-contents img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 8px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    margin: 15px 0;
+}
+
+.editor-modal .toastui-editor-contents blockquote {
+    background: #f8f9fa;
+    border-left: 4px solid #667eea;
+    margin: 15px 0;
+    padding: 15px 20px;
+    border-radius: 0 8px 8px 0;
+    font-style: italic;
+}
+
+.editor-modal .toastui-editor-contents code {
+    background: #f1f2f6;
+    color: #e74c3c;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: 'Monaco', 'Consolas', monospace;
+    font-size: 0.9em;
+}
+
+.editor-modal .toastui-editor-contents pre {
+    background: #2c3e50;
+    color: #ecf0f1;
+    padding: 20px;
+    border-radius: 8px;
+    overflow-x: auto;
+    margin: 15px 0;
+}
+
+.editor-modal .toastui-editor-contents pre code {
+    background: none;
+    color: inherit;
+    padding: 0;
+}
+
+/* 에디터 툴바 버튼 스타일링 */
+.editor-modal .toastui-editor-toolbar-buttons button {
+    transition: all 0.2s ease;
+}
+
+.editor-modal .toastui-editor-toolbar-buttons button:hover {
+    background: #e9ecef;
+    transform: translateY(-1px);
+}
+
+.editor-modal .toastui-editor-toolbar-buttons button.active {
+    background: #667eea;
+    color: white;
+}
+
+/* 모달 애니메이션 개선 */
+@keyframes modalSlideIn {
+    from {
+        transform: translateY(-30px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.modal-header,
+.modal-content,
+.modal-footer {
+    animation: modalSlideIn 0.4s ease forwards;
+}
+
+.modal-header {
+    animation-delay: 0.1s;
+}
+
+.modal-content {
+    animation-delay: 0.2s;
+}
+
+.modal-footer {
+    animation-delay: 0.3s;
+}
+
+/* 다크 모드 지원 (선택사항) */
+@media (prefers-color-scheme: dark) {
+    .editor-modal .toastui-editor-md-preview,
+    .editor-modal .toastui-editor-ww-container {
+        background: #1a1a1a;
+        color: #e0e0e0;
+    }
+
+    .editor-modal .toastui-editor-toolbar {
+        background: #2d2d2d;
+        border-bottom-color: #404040;
+    }
+}
+
 /* Responsive */
 @media (max-width: 768px) {
     .modal-header {

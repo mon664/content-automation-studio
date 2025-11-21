@@ -15,16 +15,28 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
 try:
     from utils.openai_assistant import GeminiBlogAssistant, FallbackBlogGenerator
-    from utils.blog_publisher import BlogPublisher, BlogScheduler
-    from utils.vertex_ai import image_generator
-    from utils.webdav import webdav_manager
 except ImportError as e:
     print(f"Warning: Import error in gemini_blog.py: {e}")
     GeminiBlogAssistant = None
     FallbackBlogGenerator = None
+
+try:
+    from utils.blog_publisher import BlogPublisher, BlogScheduler
+except ImportError as e:
+    print(f"Warning: Blog publisher import error: {e}")
     BlogPublisher = None
     BlogScheduler = None
+
+try:
+    from utils.vertex_ai import image_generator
+except ImportError as e:
+    print(f"Warning: Vertex AI import error: {e}")
     image_generator = None
+
+try:
+    from utils.webdav import webdav_manager
+except ImportError as e:
+    print(f"Warning: WebDAV import error: {e}")
     webdav_manager = None
 
 # GeminiBlog 블루프린트 생성
@@ -54,56 +66,44 @@ def generate_blog():
                 'error': '키워드를 입력해주세요.'
             }), 400
 
-        # Gemini API로 블로그 생성
-        if GeminiBlogAssistant:
-            try:
-                assistant = GeminiBlogAssistant()
-                blog_data = assistant.generate_blog_post(keyword, platform, style)
+        # Fallback 블로그 생성 (항상 작동하도록)
+        try:
+            if FallbackBlogGenerator:
+                fallback_generator = FallbackBlogGenerator()
+                blog_data = fallback_generator.generate_blog_post(keyword, platform, style)
 
-                # Vertex AI로 이미지 생성 (옵션) + WebDAV 업로드
-                if generate_image and image_generator and webdav_manager:
+                # Gemini API 시도 (성공하면 Gemini 결과 사용)
+                if GeminiBlogAssistant:
                     try:
-                        image_prompt = f"Professional blog header image about {keyword}"
-                        image_data = image_generator.generate_image(
-                            image_prompt,
-                            style="professional",
-                            aspect_ratio="16:9"
-                        )
-                        if image_data:
-                            filename = f"gemini_blog_{datetime.now().strftime('%Y%m%d_%H%M%S')}.jpg"
-                            image_url = webdav_manager.upload_image_from_data(image_data, filename)
-                            blog_data['image_url'] = image_url
-                            logger.info(f"이미지 업로드 완료: {image_url}")
-                    except Exception as img_e:
-                        logger.warning(f"이미지 생성 실패: {str(img_e)}")
+                        assistant = GeminiBlogAssistant()
+                        gemini_data = assistant.generate_blog_post(keyword, platform, style)
+                        blog_data = gemini_data  # Gemini 결과로 업데이트
+                        blog_data['message'] = f"'{keyword}' 주제의 블로그 콘텐츠가 Gemini API로 생성되었습니다."
+                        blog_data['api_used'] = 'gemini'
+                    except Exception as gemini_e:
+                        logger.warning(f"Gemini API 실패, fallback 사용: {str(gemini_e)}")
+                        blog_data['message'] = f"'{keyword}' 주제의 블로그 콘텐츠가 생성되었습니다 (Fallback 모드)."
+                        blog_data['api_used'] = 'fallback'
+                else:
+                    blog_data['message'] = f"'{keyword}' 주제의 블로그 콘텐츠가 생성되었습니다 (Fallback 모드)."
+                    blog_data['api_used'] = 'fallback'
 
                 return jsonify({
                     'success': True,
                     'blog_data': blog_data,
-                    'message': f"'{keyword}' 주제의 블로그 콘텐츠가 생성되었습니다.",
                     'timestamp': datetime.now().isoformat()
                 })
+            else:
+                return jsonify({
+                    'success': False,
+                    'error': 'Fallback 블로그 생성기를 사용할 수 없습니다.'
+                }), 503
 
-            except Exception as e:
-                logger.error(f"Gemini 블로그 생성 실패: {str(e)}")
-                # Fallback 시도
-                pass
-
-        # Fallback 블로그 생성
-        if FallbackBlogGenerator:
-            fallback_generator = FallbackBlogGenerator()
-            blog_data = fallback_generator.generate_blog_post(keyword, platform, style)
-
-            return jsonify({
-                'success': True,
-                'blog_data': blog_data,
-                'message': f"'{keyword}' 주제의 블로그 콘텐츠가 생성되었습니다 (Fallback 모드).",
-                'timestamp': datetime.now().isoformat()
-            })
-        else:
+        except Exception as e:
+            logger.error(f"블로그 생성 실패: {str(e)}")
             return jsonify({
                 'success': False,
-                'error': '블로그 생성 서비스를 사용할 수 없습니다.'
+                'error': '블로그 생성에 실패했습니다.'
             }), 503
 
     except Exception as e:

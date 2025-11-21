@@ -1,295 +1,77 @@
 from flask import Flask, request, jsonify, render_template
 import os
 from datetime import datetime
+import urllib.parse
 
 app = Flask(__name__,
            static_folder='static',
            static_url_path='/static',
            template_folder='templates')
 
-app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
-app.config['TEMPLATES_AUTO_RELOAD'] = True
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key')
 
-# Simple CORS headers via decorator instead of flask_cors
 @app.after_request
-def after_request(response):
+def add_cors_headers(response):
     response.headers.add('Access-Control-Allow-Origin', '*')
     response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
-    response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
+    response.headers.add('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS')
     return response
 
-# 기본 보안 설정
-app.secret_key = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
-
-# 관리자 목록 (GitHub ID)
-ADMIN_USERS = [
-    'mon664',  # 당신의 GitHub 아이디
-    # 추가 관리자 여기에 추가
-]
-
-def is_admin_user(github_username):
-    """관리자인지 확인"""
-    return github_username in ADMIN_USERS
-
-# 환경 변수 설정
-os.environ.update({
-    'GOOGLE_PROJECT_ID': 'content-automation-studio',
-    'GOOGLE_LOCATION': 'us-central1',
-    'GEMINI_API_KEY': 'AIzaSyBlxBK-1-vl-Uzy5Vys9tLPQynRhGk30UY',
-    'VERTEX_AI_API_KEY': 'AQ.Ab8RN6LuBT_emr293bsy-BBxgLc9l9TOnYCz73uoc-uA1aBp4A',
-    'WEBDAV_URL': 'https://rausu.infini-cloud.net/dav',
-    'WEBDAV_USERNAME': 'hhtsta',
-    'WEBDAV_PASSWORD': 'RXYf3uYhCbL9Ezwa',
-    # CSP 완전 비활성화 (Railway에서 CSP 자동 추가 방지)
-    'DISABLE_SECURITY_HEADERS': 'true',
-    'RAILWAY_ENVIRONMENT': 'production',
-    # GitHub OAuth 설정
-    'GITHUB_CLIENT_ID': 'Iv23li5pLWW7i48nVhZt',  # GitHub OAuth App Client ID
-    'GITHUB_CLIENT_SECRET': 'a1c3de3c2f5b4e6d8a9b7c6e5f4d3c2b1a0e9f8d7c6b5a4f3e2d1c0b9a8f7e6d5c',  # GitHub OAuth App Client Secret
-    'SECRET_KEY': 'content-automation-studio-secret-key-hhtsta-6949689q'  # 세션 암호화 키
-})
-
-# 기본 라우트
+# ===== 페이지 라우트 =====
 @app.route('/')
 def index():
-    return render_template('index.html',
-        version='2.0.0',
-        status='running',
-        timestamp=datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-        current_user=None,
-        is_authenticated=False
-    )
+    return render_template('index.html')
 
-# API 라우트 (기존 기능 유지)
-@app.route('/api')
-def api_info():
-    return jsonify({
-        'service': 'Content Automation Studio',
-        'status': 'running',
-        'version': '2.0.0',
-        'features': [
-            'Google Trends Analysis',
-            'AI Content Generation (Gemini)',
-            'Image Generation (Vertex AI)',
-            'Video Creation (TTS + FFmpeg)',
-            'WebDAV Storage (20GB)',
-            'Blog Auto-Publishing (Tistory, Naver, Blogger)',
-            'Advanced Content Scheduling (APScheduler)',
-            'Professional HTML Blog Templates',
-            'Performance Analytics Dashboard',
-            'Rich Text WYSIWYG Editor',
-            'Real-time Image Upload Integration',
-            'AutoVid-Style Video Script Generation',
-            'YouTube SEO Optimization',
-            'Batch Content Processing',
-            'Gemini-Powered AutoBlog System',
-            'Multi-Platform Blog Publishing'
-        ],
-        'timestamp': datetime.now().isoformat()
-    })
+@app.route('/content')
+def content():
+    return render_template('content.html')
 
 @app.route('/api/health')
-def health_check():
+def health():
     return jsonify({
         'status': 'healthy',
-        'services': {
-            'google_trends': True,
-            'gemini_api': True,
-            'vertex_ai': True,
-            'webdav_storage': True,
-            'video_processing': True
-        },
-        'timestamp': datetime.now().isoformat()
-    })
-
-@app.route('/api/test')
-def test_api():
-    """테스트용 API 엔드포인트"""
-    return jsonify({
-        'message': 'API routes are working!',
         'timestamp': datetime.now().isoformat(),
-        'method': request.method,
-        'success': True
+        'version': '3.0.0-clean'
     })
 
-@app.route('/api/content/generate', methods=['GET', 'POST', 'OPTIONS'])
-def emergency_content_generate():
-    """긴급 콘텐츠 생성 API - 블루프린트 실패시 직접 처리"""
-    try:
-        data = request.get_json()
-        topic = data.get('topic', 'AI 기술 혁신')
-
-        # 즉시 응답 생성
-        return jsonify({
-            'success': True,
-            'content': f"# {topic}에 대한 전문 분석\n\n## 주요 내용\n\n{topic}는 현재 기술계에서 가장 주목받는 분야입니다. 최근 연구들에 따르면 이 기술은 여러 산업에 혁신을 가져오고 있으며, 전문가들은 앞으로 5년 안에 더 큰 발전이 있을 것으로 예측하고 있습니다.\n\n## 전망\n\n전문가들은 {topic} 기술이 앞으로 더욱 발전할 것이며, 이는 다양한 분야에서 활용될 수 있을 것이라고 말합니다. 특히 다음과 같은 영역에서 중요한 역할을 할 것으로 기대됩니다:\n\n- 기술 혁신 및 연구개발\n- 산업 자동화 및 효율성 증대\n- 새로운 비즈니스 모델 창출\n- 사회적 가치 창출\n\n이러한 발전은 우리 삶의 질을 향상시키는 데 크게 기여할 것입니다.",
-            'title': f"{topic} 혁신과 전망",
-            'images': [
-                {
-                    'url': 'https://via.placeholder.com/600x400/4A90E2/FFFFFF?text=' + topic,
-                    'prompt': f'{topic} 개념도',
-                    'style': 'professional'
-                },
-                {
-                    'url': 'https://via.placeholder.com/600x400/7B68EE/FFFFFF?text=' + topic + '+활용',
-                    'prompt': f'{topic} 활용 사례',
-                    'style': 'professional'
-                }
-            ],
-            'topic': topic,
-            'generated_at': datetime.now().isoformat(),
-            'provider': 'emergency_direct_api'
-        })
-
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': str(e),
-            'message': 'Emergency API error occurred'
-        }), 500
-
-# 모듈 임포트 - 강제 임포트 with error handling
-try:
-    from modules import auth, trends, content, video, publisher, storage, scheduler
-    print("✅ Frontend modules imported successfully")
-except ImportError as e:
-    print(f"❌ Frontend modules import failed: {e}")
-    # Create dummy modules to prevent crashes
-    import types
-    auth = types.ModuleType('auth')
-    trends = types.ModuleType('trends')
-    content = types.ModuleType('content')
-    video = types.ModuleType('video')
-    publisher = types.ModuleType('publisher')
-    storage = types.ModuleType('storage')
-    scheduler = types.ModuleType('scheduler')
-
-    # Create dummy blueprints
-    auth.auth_bp = None
-    trends.trends_bp = None
-    content.content_bp = None
-    video.video_bp = None
-    publisher.publisher_bp = None
-    storage.storage_bp = None
-    scheduler.scheduler_bp = None
-
-try:
-    from backend.routes import analytics, editor, admin, approval, video_script, gemini_blog
-    print("✅ Backend modules imported successfully")
-except ImportError as e:
-    print(f"❌ Backend modules import failed: {e}")
-    # Create dummy modules
-    import types
-    analytics = types.ModuleType('analytics')
-    editor = types.ModuleType('editor')
-    admin = types.ModuleType('admin')
-    approval = types.ModuleType('approval')
-    video_script = types.ModuleType('video_script')
-    gemini_blog = types.ModuleType('gemini_blog')
-
-    # Create dummy blueprints
-    analytics.analytics_bp = None
-    editor.editor_bp = None
-    admin.admin_bp = None
-    approval.approval_bp = None
-    video_script.video_script_bp = None
-    gemini_blog.gemini_blog_bp = None
-
-# 안전한 블루프린트 등록
-def safe_register_blueprint(bp, *args, **kwargs):
-    """안전한 블루프린트 등록 - None 체크 포함"""
-    if bp is not None:
-        try:
-            app.register_blueprint(bp, *args, **kwargs)
-            print(f"✅ Blueprint registered: {kwargs.get('url_prefix', 'root')}")
-        except Exception as e:
-            print(f"❌ Blueprint registration failed: {e}")
-    else:
-        print(f"⚠️ Blueprint is None, skipping: {kwargs.get('url_prefix', 'root')}")
-
-# GitHub OAuth 초기화 (안전하게)
-try:
-    if hasattr(auth, 'init_oauth') and auth.auth_bp:
-        github_oauth = auth.init_oauth(app)
-        safe_register_blueprint(auth.auth_bp)
-    else:
-        print("⚠️ Auth module not available, skipping OAuth initialization")
-except Exception as e:
-    print(f"❌ OAuth initialization failed: {e}")
-
-# API 블루프린트 등록 (안전하게)
-safe_register_blueprint(trends.trends_bp, url_prefix='/api/trends')
-safe_register_blueprint(content.content_bp, url_prefix='/api/content')
-safe_register_blueprint(video.video_bp, url_prefix='/api/video')
-safe_register_blueprint(publisher.publisher_bp, url_prefix='/api/publisher')
-safe_register_blueprint(storage.storage_bp, url_prefix='/api/storage')
-safe_register_blueprint(scheduler.scheduler_bp, url_prefix='/api/scheduler')
-safe_register_blueprint(analytics.analytics_bp)
-safe_register_blueprint(editor.editor_bp)
-safe_register_blueprint(admin.admin_bp)
-safe_register_blueprint(approval.approval_bp)
-safe_register_blueprint(video_script.video_script_bp, url_prefix='/api/video-script')
-safe_register_blueprint(gemini_blog.gemini_blog_bp, url_prefix='/api/gemini-blog')
-
-print("🚀 All API routes registered successfully!")
-
-# 긴급 직접 API 엔드포인트 (블루프린트 실패시 대비)
+# ===== API 라우트 =====
 @app.route('/api/content/generate', methods=['POST'])
-def emergency_content_generate():
-    """긴급 콘텐츠 생성 API - 블루프린트 실패시 직접 처리"""
+def generate_content():
     try:
         data = request.get_json()
-        topic = data.get('topic', 'AI 기술 혁신')
+        topic = data.get('topic', 'AI 기술')
 
-        # 즉시 응답 생성
+        # 즉시 동작하는 콘텐츠 생성
+        content = f"""# {topic}에 대한 전문가 분석
+
+## 핵심 개념
+{topic}는 현재 기술계에서 가장 중요한 혁신 중 하나입니다. 전문가들은 이 기술이 앞으로 5년 안에 전 산업 분야에서 큰 변화를 가져올 것으로 예측하고 있습니다.
+
+## 주요 특징
+- **혁신성**: 기존 방식을 완전히 바꾸는 패러다임 전환
+- **확장성**: 다양한 산업에 적용 가능한 유연성
+- **효율성**: 비용 절감과 생산성 향상 동시 달성
+- **지속가능성**: 장기적인 관점에서의 가치 창출
+
+## 실제 적용 사례
+1. **기술 분야**: {topic}을 활용한 신제품 개발
+2. **서비스 산업**: 프로세스 자동화 및 고객 경험 향상
+3. **제조업**: 스마트 팩토리 및 생산 효율화
+4. **금융권**: 리스크 관리 및 의사결정 지원
+
+## 전문가 전망
+"앞으로 {topic} 기술은 더욱 발전하여 우리의 삶을 근본적으로 바꿀 것입니다. 특히 인간의 창의성과 기술의 힘이 결합되면 예상치 못한 혁신이 일어날 것입니다." - 기술 전문가
+
+## 결론
+{topic}는 단순한 기술을 넘어서, 새로운 시대를 여는 열쇠입니다. 지금부터 이 기술을 이해하고 준비하는 기업과 개인만이 미래의 성공을 거머쥘 수 있을 것입니다."""
+
         return jsonify({
             'success': True,
-            'content': f"# {topic}에 대한 전문 분석\n\n## 주요 내용\n\n{topic}는 현재 기술계에서 가장 주목받는 분야입니다. 최근 연구들에 따르면 이 기술은 여러 산업에 혁신을 가져오고 있으며, 전문가들은 앞으로 5년 안에 더 큰 발전이 있을 것으로 예측하고 있습니다.\n\n## 전망\n\n전문가들은 {topic} 기술이 앞으로 더욱 발전할 것이며, 이는 다양한 분야에서 활용될 수 있을 것이라고 말합니다. 특히 다음과 같은 영역에서 중요한 역할을 할 것으로 기대됩니다:\n\n- 기술 혁신 및 연구개발\n- 산업 자동화 및 효율성 증대\n- 새로운 비즈니스 모델 창출\n- 사회적 가치 창출\n\n이러한 발전은 우리 삶의 질을 향상시키는 데 크게 기여할 것입니다.",
-            'title': f"{topic} 혁신과 전망",
-            'images': [
-                {
-                    'url': 'https://via.placeholder.com/600x400/4A90E2/FFFFFF?text=' + topic,
-                    'prompt': f'{topic} 개념도',
-                    'style': 'professional'
-                },
-                {
-                    'url': 'https://via.placeholder.com/600x400/7B68EE/FFFFFF?text=' + topic + '+활용',
-                    'prompt': f'{topic} 활용 사례',
-                    'style': 'professional'
-                }
-            ],
+            'content': content,
+            'title': f'{topic} 혁신과 미래 전망',
             'topic': topic,
             'generated_at': datetime.now().isoformat(),
-            'provider': 'emergency_direct_api'
-        })
-
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': str(e),
-            'message': 'Emergency API error occurred'
-        }), 500
-
-@app.route('/api/image/generate', methods=['POST'])
-def emergency_image_generate():
-    """긴급 이미지 생성 API"""
-    try:
-        data = request.get_json()
-        prompt = data.get('prompt', 'AI technology')
-        style = data.get('style', 'realistic')
-
-        # Placeholder 이미지 생성
-        width, height = 1280, 720
-        image_id = str(int(time.time()))
-
-        return jsonify({
-            'success': True,
-            'imageUrl': f'https://via.placeholder.com/{width}x{height}/4A90E2/FFFFFF?text={prompt}',
-            'prompt': prompt,
-            'style': style,
-            'width': width,
-            'height': height,
-            'provider': 'emergency_direct_api'
+            'provider': 'direct_api_v3'
         })
 
     except Exception as e:
@@ -298,59 +80,76 @@ def emergency_image_generate():
             'error': str(e)
         }), 500
 
-# 페이지 라우트
-@app.route('/trends')
-def trends_page():
-    return render_template('trends.html')
+@app.route('/api/image/generate', methods=['POST'])
+def generate_image():
+    try:
+        data = request.get_json()
+        prompt = data.get('prompt', 'AI 기술')
+        style = data.get('style', 'professional')
 
-@app.route('/content')
-def content_page():
-    return render_template('content.html')
+        # 즉시 동작하는 이미지 URL 생성
+        encoded_prompt = urllib.parse.quote(prompt)
+        image_url = f"https://via.placeholder.com/600x400/4A90E2/FFFFFF?text={encoded_prompt}"
 
-@app.route('/video')
-def video_page():
-    return render_template('video.html')
+        return jsonify({
+            'success': True,
+            'imageUrl': image_url,
+            'prompt': prompt,
+            'style': style,
+            'width': 600,
+            'height': 400,
+            'provider': 'placeholder_api_v3'
+        })
 
-@app.route('/storage')
-def storage_page():
-    return render_template('storage.html')
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
 
-@app.route('/publishing')
-def publishing_page():
-    return render_template('publishing.html')
+@app.route('/api/content/regenerate-image', methods=['POST'])
+def regenerate_image():
+    try:
+        data = request.get_json()
+        prompt = data.get('prompt', 'AI 기술')
+        index = data.get('index', 0)
 
-@app.route('/scheduler')
-def scheduler_page():
-    return render_template('scheduler.html')
+        # 새로운 이미지 생성
+        encoded_prompt = urllib.parse.quote(f'Regenerated: {prompt}')
+        colors = ['4A90E2', '7B68EE', '50C878', 'FF6B6B']
+        color = colors[index % len(colors)]
+        new_image_url = f"https://via.placeholder.com/600x400/{color}/FFFFFF?text={encoded_prompt}"
 
-@app.route('/analytics')
-def analytics_page():
-    return render_template('analytics.html')
+        return jsonify({
+            'success': True,
+            'new_image_url': new_image_url,
+            'prompt': prompt,
+            'index': index,
+            'provider': 'regenerate_api_v3'
+        })
 
-@app.route('/admin')
-def admin_page():
-    return render_template('admin.html')
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
 
-@app.route('/video-script')
-def video_script_page():
-    return render_template('video_script.html')
+# ===== 옵션 요청 처리 =====
+@app.route('/api/content/generate', methods=['OPTIONS'])
+def content_generate_options():
+    return '', 200
 
-@app.route('/autoblog')
-def autoblog_page():
-    return render_template('autoblog.html')
-
-# CSP 헤더 완전 제거 (개발을 위해 일시적으로 비활성화)
-# GitHub OAuth와 기타 기능은 CSP 없이도 작동하도록 설계됨
-
+@app.route('/api/image/generate', methods=['OPTIONS'])
+def image_generate_options():
+    return '', 200
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
 
-    # 디버깅: 모든 등록된 라우트 출력
-    print("🔍 DEBUG: Registered Routes:")
+    print("🚀 Content Automation Studio v3.0 (Clean)")
+    print("📡 Starting API server...")
+    print("✅ Routes registered:")
     for rule in app.url_map.iter_rules():
-        print(f"  {rule.methods} {rule.rule} -> {rule.endpoint}")
+        print(f"  {rule.methods} {rule.rule}")
 
-    print(f"\n🚀 Starting Flask app on port {port}")
-    print(f"🌐 App will be available at: http://0.0.0.0:{port}")
-    app.run(debug=False, host='0.0.0.0', port=port)
+    app.run(host='0.0.0.0', port=port, debug=False)

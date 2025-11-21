@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Content Automation Studio</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="service-status">
+        <h1>🚀 Content Automation Studio</h1>
+        <p class="version">Version: {{ version or '2.0.0' }}</p>
+        <p class="status">{{ status or 'running' }}</p>
+
+        <div class="features">
+            <h3>✨ 주요 기능</h3>
+            <ul>
+                <li>📊 Google Trends Analysis</li>
+                <li>🤖 AI Content Generation (Gemini)</li>
+                <li>🎨 Image Generation (Vertex AI)</li>
+                <li>🎬 Video Creation (TTS + FFmpeg)</li>
+                <li>☁️ WebDAV Storage (20GB)</li>
+                <li>📱 Multi-Platform Publishing</li>
+            </ul>
+        </div>
+
+        <div style="margin-top: 30px;">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin-top: 20px;">
+                <a href="/api/health" class="api-link" target="_blank">
+                    <button style="width: 100%; padding: 12px; background: #3498db; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">
+                        🏥 Health Check
+                    </button>
+                </a>
+                <a href="/api/trends" class="api-link" target="_blank">
+                    <button style="width: 100%; padding: 12px; background: #e74c3c; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">
+                        📈 Trends API
+                    </button>
+                </a>
+                <a href="/api/content" class="api-link" target="_blank">
+                    <button style="width: 100%; padding: 12px; background: #f39c12; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">
+                        ✍️ Content API
+                    </button>
+                </a>
+                <a href="/api/storage" class="api-link" target="_blank">
+                    <button style="width: 100%; padding: 12px; background: #27ae60; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">
+                        💾 Storage API
+                    </button>
+                </a>
+            </div>
+        </div>
+
+        <div style="margin-top: 30px; padding: 20px; background: rgba(52, 152, 219, 0.1); border-radius: 15px;">
+            <h4 style="color: #2c3e50; margin-bottom: 15px;">📋 API 퀵 가이드</h4>
+            <div style="text-align: left; font-size: 0.9rem; color: #555;">
+                <p><strong>GET /api/health</strong> - 서비스 상태 확인</p>
+                <p><strong>POST /api/trends/analyze</strong> - 키워드 트렌드 분석</p>
+                <p><strong>POST /api/content/generate</strong> - AI 콘텐츠 생성</p>
+                <p><strong>POST /api/storage/upload</strong> - 파일 업로드</p>
+                <p><strong>GET /api/publisher/platforms</strong> - 발행 플랫폼 목록</p>
+            </div>
+        </div>
+
+        <div style="margin-top: 20px; font-size: 0.8rem; color: #95a5a6;">
+            <p>⚡ Powered by Railway + Google Cloud + WebDAV</p>
+            <p>🕒 Last updated: <span id="last-updated">{{ timestamp or '방금 전' }}</span></p>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+    <style>
+        .api-link {
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
+        .api-link button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .api-link button:active {
+            transform: translateY(0);
+        }
+
+        /* 다크 모드 지원 */
+        @media (prefers-color-scheme: dark) {
+            .api-link button {
+                opacity: 0.9;
+            }
+        }
+    </style>
+</body>
+</html>

@@ -1,9 +1,12 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
 import os
 from datetime import datetime
 
-app = Flask(__name__)
+app = Flask(__name__,
+           static_folder='static',
+           static_url_path='/static',
+           template_folder='templates')
 CORS(app)
 
 # 환경 변수 설정
@@ -20,6 +23,15 @@ os.environ.update({
 # 기본 라우트
 @app.route('/')
 def index():
+    return render_template('index.html',
+        version='2.0.0',
+        status='running',
+        timestamp=datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    )
+
+# API 라우트 (기존 기능 유지)
+@app.route('/api')
+def api_info():
     return jsonify({
         'service': 'Content Automation Studio',
         'status': 'running',

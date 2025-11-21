@@ -7,6 +7,20 @@ app = Flask(__name__,
            static_folder='static',
            static_url_path='/static',
            template_folder='templates')
+
+# CSP 완전 비활성화 설정
+app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
+app.config['TEMPLATES_AUTO_RELOAD'] = True
+
+# Flask-Talisman CSP 비활성화 (설치된 경우)
+try:
+    from flask_talisman import Talisman
+    Talisman(app, force_https=False, **{
+        'content_security_policy': None
+    })
+except ImportError:
+    pass
+
 CORS(app)
 
 # 기본 보안 설정
@@ -31,6 +45,9 @@ os.environ.update({
     'WEBDAV_URL': 'https://rausu.infini-cloud.net/dav',
     'WEBDAV_USERNAME': 'hhtsta',
     'WEBDAV_PASSWORD': 'RXYf3uYhCbL9Ezwa',
+    # CSP 완전 비활성화 (Railway에서 CSP 자동 추가 방지)
+    'DISABLE_SECURITY_HEADERS': 'true',
+    'RAILWAY_ENVIRONMENT': 'production',
     # GitHub OAuth 설정
     'GITHUB_CLIENT_ID': 'Iv23li5pLWW7i48nVhZt',  # GitHub OAuth App Client ID
     'GITHUB_CLIENT_SECRET': 'a1c3de3c2f5b4e6d8a9b7c6e5f4d3c2b1a0e9f8d7c6b5a4f3e2d1c0b9a8f7e6d5c',  # GitHub OAuth App Client Secret
@@ -145,7 +162,14 @@ def admin_page():
 
 @app.after_request
 def after_request(response):
-    """CORS 헤더만 추가"""
+    """CORS 헤더만 추가하고 모든 CSP 헤더 제거"""
+    # Railway이 추가하는 CSP 헤더 강제 제거
+    response.headers.pop('Content-Security-Policy', None)
+    response.headers.pop('Content-Security-Policy-Report-Only', None)
+    response.headers.pop('X-Content-Security-Policy', None)
+    response.headers.pop('X-WebKit-CSP', None)
+
+    # CORS 헤더 추가
     response.headers.add('Access-Control-Allow-Origin', '*')
     response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
     response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')

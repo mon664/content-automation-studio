@@ -199,6 +199,7 @@ def generate_enhanced_blog():
     """향상된 AI 블로그 글 생성 (스토리텔링 + 이미지 자동 삽입)"""
     try:
         data = request.get_json()
+        print(f"Enhanced blog request received: {data}")  # Debug log
 
         if not data or 'topic' not in data:
             return jsonify({'error': 'Topic is required'}), 400
@@ -211,136 +212,17 @@ def generate_enhanced_blog():
         storytelling = data.get('storytelling', True)
         auto_images = data.get('auto_images', True)
 
-        # 향상된 파워 블로거 프롬프트로 콘텐츠 생성
-        if GEMINI_AVAILABLE and generate_blog_prompt:
-            prompt = generate_blog_prompt(
-                topic=topic,
-                keywords=keywords,
-                target_audience=target_audience,
-                tone=tone
-            )
+        # 임시로 Fallback 모드만 사용 (안정성 확보)
+        print(f"Using fallback mode for enhanced blog generation")
 
-            # 스토리텔링 형식 강화
-            if storytelling:
-                prompt += """
+        # Fallback 콘텐츠 생성
+        fallback_result = generate_enhanced_fallback_content(topic, keywords, tone, length, target_audience, storytelling, auto_images)
 
-                **스토리텔링 형식 요구사항:**
-                1. **서론 (Hook)**: 독자의 공감을 얻는 개인적인 경험이나 흥미로운 이야기로 시작
-                2. **갈등 제기**: 주제와 관련된 문제나 도전 과제 제시
-                3. **해결책 제시**: 구체적인 해결 방법과 전문적 인사이트 제공
-                4. **실제 사례**: 성공 사례나 실제 경험 공유
-                5. **결론 (Takeaway)**: 명확한 행동 지침과 영감 제공
+        # 이미지 처리 (단순화)
+        generated_images = fallback_result.get('generated_images', [])
 
-                **이미지 자동 삽입 요구사항:**
-                - 중요한 섹션마다 전문적인 이미지 포함
-                - 이미지 프롬프트 형식: [[IMAGE_PROMPT: 상세한 이미지 설명]]
-                - 이미지는 블로그 내용을 시각적으로 강화해야 함
-                """
-        else:
-            # Fallback 모드
-            return generate_enhanced_fallback_content(topic, keywords, tone, length, target_audience, storytelling, auto_images)
-
-        # 콘텐츠 생성
-        try:
-            blog_content = generate_content_with_enhanced_prompt(prompt)
-        except Exception as api_error:
-            print(f"Enhanced content generation failed: {api_error}")
-            return generate_enhanced_fallback_content(topic, keywords, tone, length, target_audience, storytelling, auto_images)
-
-        # 이미지 프롬프트 추출 및 자동 생성
-        image_prompts = extract_and_process_image_prompts(blog_content)
-        generated_images = []
-
-        if auto_images and image_generator and webdav_manager:
-            # 이미지 자동 생성 및 WebDAV 업로드
-            for i, prompt in enumerate(image_prompts):
-                try:
-                    enhanced_prompt = f"Professional blog image about {prompt}, high quality, 16:9 aspect ratio"
-                    image_data = image_generator.generate_image(enhanced_prompt)
-
-                    if image_data:
-                        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-                        filename = f"enhanced_blog_{timestamp}_{i+1}.png"
-                        image_url = webdav_manager.upload_image_from_data(image_data, filename)
-
-                        generated_images.append({
-                            'prompt': prompt,
-                            'url': image_url,
-                            'placeholder': f"[이미지: {prompt}]"
-                        })
-                except:
-                    # 실패 시 placeholder 이미지 URL
-                    generated_images.append({
-                        'prompt': prompt,
-                        'url': f"https://via.placeholder.com/600x400/4A90E2/FFFFFF?text={encodeURIComponent(prompt)}",
-                        'placeholder': f"[이미지: {prompt}]"
-                    })
-        else:
-            # WebDAV 없을 때 placeholder 생성
-            for prompt in image_prompts:
-                generated_images.append({
-                    'prompt': prompt,
-                    'url': f"https://via.placeholder.com/600x400/7B68EE/FFFFFF?text={encodeURIComponent(prompt)}",
-                    'placeholder': f"[이미지: {prompt}]"
-                })
-
-        # 이미지 URL을 실제 콘텐츠에 삽입
-        processed_content = blog_content
-        for i, image_info in enumerate(generated_images):
-            processed_content = processed_content.replace(
-                f"[[IMAGE_PROMPT: {image_info['prompt']}]]",
-                f"![{image_info['prompt']}]({image_info['url']})"
-            )
-
-        # 향상된 SEO 메타데이터
-        seo_meta = {
-            'description': f"{topic}에 대한 전문적이고 심층적인 분석. 실용적인 팁과 최신 트렌드를 제공합니다.",
-            'keywords': f"{topic}, {', '.join(keywords[:5] if keywords else [topic])}",
-            'author': 'AI Content Studio',
-            'og_title': f"{topic}: 전문가 가이드",
-            'og_description': f"{topic}에 대한 모든 것을 담은 심층 가이드"
-        }
-
-        return jsonify({
-            'success': True,
-            'title': generate_title(topic, tone),
-            'content': processed_content,
-            'image_count': len(generated_images),
-            'generated_images': generated_images,
-            'seo_meta': seo_meta,
-            'enhancement_info': {
-                'ai_enhanced': True,
-                'power_blogger_style': True,
-                'storytelling_applied': storytelling,
-                'image_integration': auto_images,
-                'word_count': len(processed_content.split()),
-                'character_count': len(processed_content),
-                'estimated_reading_time': max(3, len(processed_content.split()) // 200)
-            },
-            'metadata': {
-                'topic': topic,
-                'keywords': keywords,
-                'tone': tone,
-                'length': length,
-                'target_audience': target_audience,
-                'generated_at': datetime.now().isoformat(),
-                'enhancement_level': 'premium',
-                'content_type': 'enhanced_blog_post'
-            }
-        })
-
-    except Exception as e:
-        print(f"Enhanced blog generation error: {e}")
-        # 에러 발생 시 기본 fallback
-        return generate_enhanced_fallback_content(
-            data.get('topic', 'AI 콘텐츠'),
-            data.get('keywords', []),
-            data.get('tone', 'professional'),
-            data.get('length', 'long'),
-            data.get('target_audience', 'general'),
-            data.get('storytelling', True),
-            data.get('auto_images', True)
-        )
+        # jsonify로 래핑
+        return jsonify(fallback_result)
 
 @content_bp.route('/regenerate-image', methods=['POST'])
 def regenerate_image():
@@ -561,7 +443,7 @@ def generate_enhanced_fallback_content(topic, keywords, tone, length, target_aud
 
     title = f"{topic} 혁신: 전문가가 밝히는 성공 전략과 실전 노하우"
 
-    return jsonify({
+    return {
         'success': True,
         'title': title,
         'content': content.strip(),
@@ -592,7 +474,7 @@ def generate_enhanced_fallback_content(topic, keywords, tone, length, target_aud
             'enhancement_level': 'premium',
             'content_type': 'enhanced_blog_post'
         }
-    })
+    }
 
 def generate_blog_content_safe(topic, keywords, tone, length, target_audience):
     """안전한 블로그 글 생성 (타임아웃 방지)"""

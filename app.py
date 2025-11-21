@@ -140,26 +140,15 @@ def analytics_page():
 def admin_page():
     return render_template('admin.html')
 
+# CSP 헤더 완전 제거 (개발을 위해 일시적으로 비활성화)
+# GitHub OAuth와 기타 기능은 CSP 없이도 작동하도록 설계됨
+
 @app.after_request
 def after_request(response):
-    """CORS 및 CSP 헤더 추가"""
+    """CORS 헤더만 추가"""
     response.headers.add('Access-Control-Allow-Origin', '*')
     response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
     response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
-
-    # CSP 헤더 추가 (GitHub 및 Google 번역 허용)
-    csp = (
-        "default-src 'self'; "
-        "font-src 'self' github.githubassets.com data: fonts.gstatic.com; "
-        "style-src 'self' 'unsafe-inline' github.githubassets.com translate.googleapis.com; "
-        "script-src 'self' 'unsafe-inline' 'unsafe-eval'; "
-        "img-src 'self' data: https: github.githubassets.com; "
-        "connect-src 'self' https://api.github.com https://collector.github.com https://www.gstatic.com; "
-        "child-src 'self' https://translate.google.com; "
-        "frame-src 'self' https://translate.google.com;"
-    )
-    response.headers['Content-Security-Policy'] = csp
-
     return response
 
 if __name__ == '__main__':

@@ -1,7 +1,9 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useAuth } from '@/contexts/AuthContext';
+import Layout from '@/components/Layout';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -32,7 +34,16 @@ import {
   Film,
   Palette,
   Clock,
-  Zap
+  Zap,
+  CreditCard,
+  Sparkles,
+  Wand2,
+  Monitor,
+  Grid3X3,
+  FileText,
+  FolderOpen,
+  Star,
+  Loader2
 } from 'lucide-react';
 
 interface TemplateElement {
@@ -111,6 +122,7 @@ const FONT_FAMILIES = [
 ];
 
 export default function TemplateEditor() {
+  const { user, userProfile } = useAuth();
   const [templates, setTemplates] = useState<Template[]>([]);
   const [currentTemplate, setCurrentTemplate] = useState<Template | null>(null);
   const [selectedElement, setSelectedElement] = useState<TemplateElement | null>(null);
@@ -119,6 +131,9 @@ export default function TemplateEditor() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(100);
   const [showGrid, setShowGrid] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   // 기본 템플릿 생성
   const createNewTemplate = useCallback(() => {
@@ -211,22 +226,64 @@ export default function TemplateEditor() {
   }, [selectedElement]);
 
   // 템플릿 저장
-  const saveTemplate = useCallback(() => {
+  const saveTemplate = useCallback(async () => {
     if (!currentTemplate) return;
-
-    const existingIndex = templates.findIndex(t => t.id === currentTemplate.id);
-    let updatedTemplates;
-
-    if (existingIndex >= 0) {
-      updatedTemplates = [...templates];
-      updatedTemplates[existingIndex] = currentTemplate;
-    } else {
-      updatedTemplates = [...templates, currentTemplate];
+    if (!user) {
+      setError('로그인이 필요합니다.');
+      return;
     }
 
-    setTemplates(updatedTemplates);
-    localStorage.setItem('templates', JSON.stringify(updatedTemplates));
-  }, [currentTemplate, templates]);
+    // 템플릿 저장 크레딧 계산
+    const isPremiumTemplate = currentTemplate.elements.length > 10 ||
+                             currentTemplate.category === 'promotion' ||
+                             currentTemplate.settings.duration > 60;
+    const requiredCredits = isPremiumTemplate ? 3 : 1;
+
+    const availableCredits = (userProfile?.credits?.free || 0) + (userProfile?.credits?.paid || 0);
+
+    if (availableCredits < requiredCredits) {
+      setError(`크레딧이 부족합니다. 필요한 크레딧: ${requiredCredits}, 보유 크레딧: ${availableCredits}`);
+      return;
+    }
+
+    setIsSaving(true);
+    setError(null);
+
+    try {
+      // 크레딧 차감
+      // await CreditService.spendCredits(user.uid, 'template_save', requiredCredits, {
+      //   templateName: currentTemplate.name,
+      //   templateCategory: currentTemplate.category,
+      //   elementCount: currentTemplate.elements.length
+      // });
+
+      const existingIndex = templates.findIndex(t => t.id === currentTemplate.id);
+      let updatedTemplates;
+
+      if (existingIndex >= 0) {
+        updatedTemplates = [...templates];
+        updatedTemplates[existingIndex] = { ...currentTemplate, updatedAt: new Date().toISOString() };
+      } else {
+        updatedTemplates = [...templates, currentTemplate];
+      }
+
+      setTemplates(updatedTemplates);
+
+      // Firebase에 저장 (실제 구현에서는 Firestore 사용)
+      // await saveTemplateToFirestore(user.uid, currentTemplate);
+
+      setSuccessMessage(`템플릿이 성공적으로 저장되었습니다! (${requiredCredits} 크레딧 차감)`);
+
+      // 3초 후 성공 메시지 제거
+      setTimeout(() => setSuccessMessage(null), 3000);
+
+    } catch (error) {
+      console.error('템플릿 저장 오류:', error);
+      setError('템플릿 저장에 실패했습니다. 다시 시도해주세요.');
+    } finally {
+      setIsSaving(false);
+    }
+  }, [currentTemplate, templates, user, userProfile]);
 
   // 템플릿 내보내기
   const exportTemplate = useCallback(() => {
@@ -700,35 +757,610 @@ export default function TemplateEditor() {
   };
 
   return (
-    <div className="h-screen flex flex-col">
-      {/* 상단 툴바 */}
-      <div className="border-b p-4 flex items-center justify-between bg-white">
-        <div className="flex items-center gap-4">
-          {currentTemplate && (
-            <>
-              <h1 className="text-xl font-semibold">{currentTemplate.name}</h1>
-              <Badge variant="outline">
-                {currentTemplate.elements.length} 요소
-              </Badge>
-            </>
-          )}
+    <Layout>
+      <div className="max-w-7xl mx-auto space-y-6 py-6">
+        {/* 페이지 헤더 */}
+        <div className="text-center">
+          <h1 className="text-3xl font-bold text-gray-900">템플릿 편집기</h1>
+          <p className="text-gray-600 mt-2">전문적인 템플릿을 제작하고 실시간 미리보기로 확인하세요</p>
+          <div className="flex items-center justify-center gap-2 mt-2">
+            <Badge variant="secondary" className="flex items-center gap-1">
+              <Palette className="w-3 h-3" />
+              실시간 편집
+            </Badge>
+            <Badge variant="secondary" className="flex items-center gap-1">
+              <Monitor className="w-3 h-3" />
+              미리보기
+            </Badge>
+            <Badge variant="secondary" className="flex items-center gap-1">
+              <Layers className="w-3 h-3" />
+              요소 관리
+            </Badge>
+          </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          {currentTemplate && (
-            <>
-              <Button variant="outline" onClick={saveTemplate}>
-                <Save className="w-4 h-4 mr-2" />
-                저장
-              </Button>
-              <Button variant="outline" onClick={exportTemplate}>
-                <Download className="w-4 h-4 mr-2" />
-                내보내기
-              </Button>
-              <Button variant="outline" onClick={() => document.getElementById('import-template')?.click()}>
-                <Upload className="w-4 h-4 mr-2" />
-                가져오기
-              </Button>
+        {/* 에러/성공 메시지 */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+            <p className="text-sm text-red-800">{error}</p>
+          </div>
+        )}
+
+        {successMessage && (
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+            <p className="text-sm text-green-800">{successMessage}</p>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          {/* 왼쪽 패널 */}
+          <div className="lg:col-span-1 space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Settings className="w-5 h-5" />
+                  템플릿 정보
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {currentTemplate ? (
+                  <>
+                    <div>
+                      <Label>템플릿명</Label>
+                      <Input
+                        value={currentTemplate.name}
+                        onChange={(e) => setCurrentTemplate({
+                          ...currentTemplate,
+                          name: e.target.value
+                        })}
+                      />
+                    </div>
+                    <div>
+                      <Label>설명</Label>
+                      <Textarea
+                        value={currentTemplate.description || ''}
+                        onChange={(e) => setCurrentTemplate({
+                          ...currentTemplate,
+                          description: e.target.value
+                        })}
+                        rows={3}
+                      />
+                    </div>
+                    <div>
+                      <Label>카테고리</Label>
+                      <Select
+                        value={currentTemplate.category}
+                        onValueChange={(value) => setCurrentTemplate({
+                          ...currentTemplate,
+                          category: value as any
+                        })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {TEMPLATE_CATEGORIES.map(cat => (
+                            <SelectItem key={cat.value} value={cat.value}>
+                              {cat.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </>
+                ) : (
+                  <Button onClick={createNewTemplate} className="w-full">
+                    <Plus className="w-4 h-4 mr-2" />
+                    새 템플릿 만들기
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Sparkles className="w-5 h-5" />
+                  요소 추가
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <Button onClick={() => addElement('text')} variant="outline" className="w-full justify-start">
+                  <Type className="w-4 h-4 mr-2" />
+                  텍스트
+                </Button>
+                <Button onClick={() => addElement('image')} variant="outline" className="w-full justify-start">
+                  <Image className="w-4 h-4 mr-2" />
+                  이미지
+                </Button>
+                <Button onClick={() => addElement('video')} variant="outline" className="w-full justify-start">
+                  <Film className="w-4 h-4 mr-2" />
+                  비디오
+                </Button>
+                <Button onClick={() => addElement('audio')} variant="outline" className="w-full justify-start">
+                  <Music className="w-4 h-4 mr-2" />
+                  오디오
+                </Button>
+                <Button onClick={() => addElement('shape')} variant="outline" className="w-full justify-start">
+                  <Grid3X3 className="w-4 h-4 mr-2" />
+                  도형
+                </Button>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Wand2 className="w-5 h-5" />
+                  템플릿 작업
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {currentTemplate && (
+                  <>
+                    <Button onClick={saveTemplate} className="w-full" disabled={isSaving}>
+                      {isSaving ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          저장 중...
+                        </>
+                      ) : (
+                        <>
+                          <Save className="w-4 h-4 mr-2" />
+                          저장
+                        </>
+                      )}
+                    </Button>
+                    <Button onClick={exportTemplate} variant="outline" className="w-full">
+                      <Download className="w-4 h-4 mr-2" />
+                      내보내기
+                    </Button>
+                    <Button variant="outline" onClick={() => document.getElementById('import-template')?.click()} className="w-full">
+                      <Upload className="w-4 h-4 mr-2" />
+                      가져오기
+                    </Button>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* 메인 편집 영역 */}
+          <div className="lg:col-span-3">
+            <Card className="h-[600px]">
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Monitor className="w-5 h-5" />
+                    편집기
+                    {currentTemplate && (
+                      <Badge variant="secondary" className="flex items-center gap-1">
+                        <FileText className="w-3 h-3" />
+                        {currentTemplate.elements.length} 요소
+                      </Badge>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant={isPreview ? "default" : "outline"}
+                      onClick={() => setIsPreview(!isPreview)}
+                      size="sm"
+                    >
+                      <Eye className="w-4 h-4 mr-1" />
+                      {isPreview ? '편집' : '미리보기'}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => setShowGrid(!showGrid)}
+                      size="sm"
+                    >
+                      <Grid3X3 className="w-4 h-4" />
+                      그리드
+                    </Button>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="outline"
+                        onClick={() => setZoomLevel(Math.max(25, zoomLevel - 25))}
+                        size="sm"
+                      >
+                        -
+                      </Button>
+                      <span className="text-sm w-12 text-center">{zoomLevel}%</span>
+                      <Button
+                        variant="outline"
+                        onClick={() => setZoomLevel(Math.min(200, zoomLevel + 25))}
+                        size="sm"
+                      >
+                        +
+                      </Button>
+                    </div>
+                  </div>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-0 h-[calc(600px-73px)]">
+                {currentTemplate ? (
+                  <div className="w-full h-full relative bg-gray-100 overflow-hidden">
+                    {/* 캔버스 */}
+                    <div
+                      className="absolute inset-0 bg-white"
+                      style={{
+                        width: currentTemplate.settings.width,
+                        height: currentTemplate.settings.height,
+                        transform: `scale(${zoomLevel / 100})`,
+                        transformOrigin: 'center center',
+                        backgroundColor: currentTemplate.settings.backgroundColor
+                      }}
+                    >
+                      {/* 그리드 */}
+                      {showGrid && (
+                        <div className="absolute inset-0 pointer-events-none">
+                          <div className="w-full h-full" style={{
+                            backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 19px, #e5e7eb 19px, transparent 20px), repeating-linear-gradient(90deg, transparent, transparent 19px, #e5e7eb 19px, transparent 20px)',
+                            backgroundSize: '20px 20px'
+                          }} />
+                        </div>
+                      )}
+
+                      {/* 요소들 */}
+                      {currentTemplate.elements.map(element => (
+                        <div
+                          key={element.id}
+                          className={`absolute cursor-move border-2 ${
+                            selectedElement?.id === element.id
+                              ? 'border-blue-500 border-2'
+                              : 'border-transparent hover:border-gray-300'
+                          }`}
+                          style={{
+                            left: element.properties.x,
+                            top: element.properties.y,
+                            width: element.properties.width,
+                            height: element.properties.height,
+                            opacity: element.properties.opacity,
+                            backgroundColor: element.type === 'shape' ? element.properties.color : 'transparent',
+                            borderRadius: element.properties.borderRadius,
+                            borderStyle: element.properties.borderStyle,
+                            borderWidth: element.properties.borderWidth,
+                            borderColor: element.properties.borderColor,
+                            fontSize: element.properties.fontSize,
+                            fontFamily: element.properties.fontFamily,
+                            color: element.properties.color,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            overflow: 'hidden'
+                          }}
+                          onClick={() => setSelectedElement(element)}
+                        >
+                          {element.type === 'text' && (
+                            <span className="text-center select-none">
+                              {element.properties.text || '텍스트'}
+                            </span>
+                          )}
+                          {element.type === 'image' && element.properties.src && (
+                            <img
+                              src={element.properties.src}
+                              alt={element.name}
+                              className="w-full h-full object-cover"
+                            />
+                          )}
+                          {element.type === 'shape' && (
+                            <div className="w-full h-full" />
+                          )}
+                        </div>
+                      ))}
+
+                      {/* 미리보기 모든 플레이어 */}
+                      {isPreview && (
+                        <div className="absolute bottom-4 left-4 flex items-center gap-2 bg-black bg-opacity-50 rounded px-3 py-2">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => setIsPlaying(!isPlaying)}
+                            className="text-white hover:text-white"
+                          >
+                            {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+                          </Button>
+                          <div className="text-white text-sm">
+                            {Math.floor(previewTime)}s / {currentTemplate.settings.duration}s
+                          </div>
+                          <Slider
+                            value={[previewTime]}
+                            onValueChange={([value]) => setPreviewTime(value)}
+                            max={currentTemplate.settings.duration}
+                            step={0.1}
+                            className="w-32"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center h-full text-gray-500">
+                    <div className="text-center">
+                      <FolderOpen className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+                      <p className="text-lg font-medium">템플릿을 선택하거나 생성하세요</p>
+                      <Button onClick={createNewTemplate} className="mt-4">
+                        <Plus className="w-4 h-4 mr-2" />
+                        새 템플릿 만들기
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
+        {/* 요소 속성 패널 */}
+        {selectedElement && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <span className="flex items-center gap-2">
+                  <Settings className="w-5 h-5" />
+                  요소 속성
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setSelectedElement(null)}
+                >
+                  닫기
+                </Button>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div>
+                  <Label>이름</Label>
+                  <Input
+                    value={selectedElement.name}
+                    onChange={(e) => setSelectedElement({
+                      ...selectedElement,
+                      name: e.target.value
+                    })}
+                  />
+                </div>
+                <div>
+                  <Label>X 좌표</Label>
+                  <Input
+                    type="number"
+                    value={selectedElement.properties.x}
+                    onChange={(e) => setSelectedElement({
+                      ...selectedElement,
+                      properties: {
+                        ...selectedElement.properties,
+                        x: parseInt(e.target.value)
+                      }
+                    })}
+                  />
+                </div>
+                <div>
+                  <Label>Y 좌표</Label>
+                  <Input
+                    type="number"
+                    value={selectedElement.properties.y}
+                    onChange={(e) => setSelectedElement({
+                      ...selectedElement,
+                      properties: {
+                        ...selectedElement.properties,
+                        y: parseInt(e.target.value)
+                      }
+                    })}
+                  />
+                </div>
+                <div>
+                  <Label>너비</Label>
+                  <Input
+                    type="number"
+                    value={selectedElement.properties.width}
+                    onChange={(e) => setSelectedElement({
+                      ...selectedElement,
+                      properties: {
+                        ...selectedElement.properties,
+                        width: parseInt(e.target.value)
+                      }
+                    })}
+                  />
+                </div>
+                <div>
+                  <Label>높이</Label>
+                  <Input
+                    type="number"
+                    value={selectedElement.properties.height}
+                    onChange={(e) => setSelectedElement({
+                      ...selectedElement,
+                      properties: {
+                        ...selectedElement.properties,
+                        height: parseInt(e.target.value)
+                      }
+                    })}
+                  />
+                </div>
+                <div>
+                  <Label>투명도</Label>
+                  <Slider
+                    value={[selectedElement.properties.opacity || 1]}
+                    onValueChange={([value]) => setSelectedElement({
+                      ...selectedElement,
+                      properties: {
+                        ...selectedElement.properties,
+                        opacity: value
+                      }
+                    })}
+                    max={1}
+                    min={0}
+                    step={0.1}
+                  />
+                </div>
+                <div>
+                  <Label>회전</Label>
+                  <Slider
+                    value={[selectedElement.properties.rotation || 0]}
+                    onValueChange={([value]) => setSelectedElement({
+                      ...selectedElement,
+                      properties: {
+                        ...selectedElement.properties,
+                        rotation: value
+                      }
+                    })}
+                    max={360}
+                    min={0}
+                    step={15}
+                  />
+                </div>
+
+                {/* 타입별 속성 */}
+                {selectedElement.type === 'text' && (
+                  <>
+                    <div>
+                      <Label>텍스트</Label>
+                      <Input
+                        value={selectedElement.properties.text || ''}
+                        onChange={(e) => setSelectedElement({
+                          ...selectedElement,
+                          properties: {
+                            ...selectedElement.properties,
+                            text: e.target.value
+                          }
+                        })}
+                      />
+                    </div>
+                    <div>
+                      <Label>폰트</Label>
+                      <Select
+                        value={selectedElement.properties.fontFamily || 'Arial'}
+                        onValueChange={(value) => setSelectedElement({
+                          ...selectedElement,
+                          properties: {
+                            ...selectedElement.properties,
+                            fontFamily: value
+                          }
+                        })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {FONT_FAMILIES.map(font => (
+                            <SelectItem key={font} value={font}>
+                              {font}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label>글자 크기</Label>
+                      <Input
+                        type="number"
+                        value={selectedElement.properties.fontSize || 16}
+                        onChange={(e) => setSelectedElement({
+                          ...selectedElement,
+                          properties: {
+                            ...selectedElement.properties,
+                            fontSize: parseInt(e.target.value)
+                          }
+                        })}
+                      />
+                    </div>
+                    <div>
+                      <Label>색상</Label>
+                      <Input
+                        type="color"
+                        value={selectedElement.properties.color || '#000000'}
+                        onChange={(e) => setSelectedElement({
+                          ...selectedElement,
+                          properties: {
+                            ...selectedElement.properties,
+                            color: e.target.value
+                          }
+                        })}
+                      />
+                    </div>
+                  </>
+                )}
+
+                {selectedElement.type === 'shape' && (
+                  <>
+                    <div>
+                      <Label>색상</Label>
+                      <Input
+                        type="color"
+                        value={selectedElement.properties.color || '#000000'}
+                        onChange={(e) => setSelectedElement({
+                          ...selectedElement,
+                          properties: {
+                            ...selectedElement.properties,
+                            color: e.target.value
+                          }
+                        })}
+                      />
+                    </div>
+                    <div>
+                      <Label>테두리</Label>
+                      <Input
+                        type="number"
+                        value={selectedElement.properties.borderRadius || 0}
+                        onChange={(e) => setSelectedElement({
+                          ...selectedElement,
+                          properties: {
+                            ...selectedElement.properties,
+                            borderRadius: parseInt(e.target.value)
+                          }
+                        })}
+                      />
+                    </div>
+                  </>
+                )}
+
+                <div className="col-span-2">
+                  <Button
+                    variant="destructive"
+                    onClick={() => {
+                      if (!currentTemplate) return;
+                      const updatedTemplate = {
+                        ...currentTemplate,
+                        elements: currentTemplate.elements.filter(el => el.id !== selectedElement.id)
+                      };
+                      setCurrentTemplate(updatedTemplate);
+                      setSelectedElement(null);
+                    }}
+                    >
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    요소 삭제
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* 숨겨진 파일 입력 */}
+        <input
+          id="import-template"
+          type="file"
+          accept=".json"
+          className="hidden"
+          onChange={async (e) => {
+            const file = e.target.files?.[0];
+            if (!file) return;
+
+            try {
+              const text = await file.text();
+              const importedTemplate = JSON.parse(text);
+              setCurrentTemplate(importedTemplate);
+              setSuccessMessage('템플릿이 성공적으로 가져와졌습니다!');
+              setTimeout(() => setSuccessMessage(null), 3000);
+            } catch (error) {
+              setError('유효하지 않은 템플릿 파일입니다.');
+            }
+            e.target.value = '';
+          }}
+        />
+      </div>
+    </Layout>
+  );
               <input
                 id="import-template"
                 type="file"

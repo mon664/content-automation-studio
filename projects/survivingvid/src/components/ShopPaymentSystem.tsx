@@ -10,6 +10,8 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useAuth } from '@/contexts/AuthContext';
+import Layout from '@/components/Layout';
 import {
   ShoppingBag,
   CreditCard,
@@ -39,13 +41,14 @@ import {
   Trophy,
   Target,
   Rocket,
-  FiCreditCard,
   DollarSign,
   PiggyBank,
-  Calendar,
   AlertCircle,
   CheckCircle,
-  Info
+  Info,
+  Coins,
+  ShoppingCart as ShoppingCartIcon,
+  PaymentMethod
 } from 'lucide-react';
 
 interface Product {
@@ -235,6 +238,7 @@ const PURCHASE_HISTORY: PurchaseHistory[] = [
 ];
 
 export default function ShopPaymentSystem() {
+  const { user, userProfile } = useAuth();
   const [products] = useState<Product[]>(PRODUCTS);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [purchaseHistory] = useState<PurchaseHistory[]>(PURCHASE_HISTORY);
@@ -243,9 +247,16 @@ export default function ShopPaymentSystem() {
   const [paymentMethod, setPaymentMethod] = useState('card');
   const [promoCode, setPromoCode] = useState('');
   const [promoApplied, setPromoApplied] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
   // 카트에 상품 추가
   const addToCart = (product: Product) => {
+    if (!user) {
+      setError('로그인이 필요합니다.');
+      return;
+    }
+
     setCart(prev => {
       const existingItem = prev.find(item => item.id === product.id);
       if (existingItem) {
@@ -257,6 +268,7 @@ export default function ShopPaymentSystem() {
       }
       return [...prev, { ...product, quantity: 1, total: product.price }];
     });
+    setSuccess(`${product.name}을(를) 장바구니에 추가했습니다.`);
   };
 
   // 카트에서 상품 제거
@@ -284,25 +296,68 @@ export default function ShopPaymentSystem() {
 
   // 결제 처리
   const processPayment = async () => {
+    if (!user) {
+      setError('로그인이 필요합니다.');
+      return;
+    }
+
+    if (cart.length === 0) {
+      setError('장바구니가 비어있습니다.');
+      return;
+    }
+
     setPaymentProcessing(true);
+    setError(null);
+    setSuccess(null);
+
     try {
       // 실제 결제 처리 로직
-      // const response = await fetch('/api/payment/process', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({
-      //     items: cart,
-      //     paymentMethod,
-      //     promoCode: promoApplied ? promoCode : null
-      //   })
-      // });
+      const response = await fetch('/api/payment/process', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${await user.getIdToken()}`
+        },
+        body: JSON.stringify({
+          items: cart,
+          paymentMethod,
+          promoCode: promoApplied ? promoCode : null,
+          userId: user.uid,
+          userEmail: user.email
+        })
+      });
 
-      await new Promise(resolve => setTimeout(resolve, 2000)); // 데모용
-      console.log('결제 성공');
+      if (!response.ok) {
+        throw new Error('결제 처리에 실패했습니다.');
+      }
+
+      const result = await response.json();
+
+      // 구매 내역에 추가
+      const timestamp = Date.now();
+      const newPurchase: PurchaseHistory = {
+        id: `purchase_${timestamp}`,
+        productId: cart[0].id, // 첫 번째 상품 ID
+        productName: cart.map(item => `${item.name} (${item.quantity}개)`).join(', '),
+        type: cart[0].type,
+        price: calculateTotal(),
+        currency: 'USD',
+        date: new Date().toISOString().split('T')[0],
+        status: 'completed',
+        paymentMethod: renderPaymentMethod(paymentMethod)?.label || paymentMethod,
+        transactionId: result.transactionId || `TXN_${timestamp}`
+      };
+
+      setPurchaseHistory(prev => [newPurchase, ...prev]);
       setCart([]);
       setSelectedProduct(null);
+      setPromoApplied(false);
+      setPromoCode('');
+      setSuccess('결제가 성공적으로 완료되었습니다! 구매 내역에서 확인하세요.');
+
     } catch (error) {
       console.error('결제 실패:', error);
+      setError('결제 처리 중 오류가 발생했습니다. 다시 시도해주세요.');
     } finally {
       setPaymentProcessing(false);
     }
@@ -420,17 +475,64 @@ export default function ShopPaymentSystem() {
   const cartTotal = calculateTotal();
 
   return (
-    <div className="h-screen bg-gray-50">
-      <div className="flex h-full">
-        {/* 메인 콘텐츠 */}
-        <div className="flex-1 overflow-hidden">
-          <ScrollArea className="h-full">
-            <div className="p-6">
-              <div className="max-w-6xl mx-auto">
-                <div className="mb-6">
-                  <h1 className="text-3xl font-bold">상점</h1>
-                  <p className="text-gray-600">SurvivingVid의 프리미엄 기능을 구매하세요</p>
-                </div>
+    <Layout>
+      <div className="space-y-6">
+        {/* 알림 메시지 */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center gap-3">
+            <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
+            <p className="text-red-800">{error}</p>
+            <button
+              onClick={() => setError(null)}
+              className="ml-auto text-red-600 hover:text-red-800"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+
+        {success && (
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-center gap-3">
+            <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
+            <p className="text-green-800">{success}</p>
+            <button
+              onClick={() => setSuccess(null)}
+              className="ml-auto text-green-600 hover:text-green-800"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+
+        {/* 헤더 정보 */}
+        <div className="bg-white rounded-lg border p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
+                <ShoppingCart className="w-8 h-8" />
+                SurvivingVid 상점
+              </h1>
+              <p className="text-gray-600">프리미엄 기능을 구매하고 더 많은 크레딧을 얻으세요</p>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="text-right">
+                <p className="text-sm text-gray-500">S-CRD</p>
+                <p className="text-xl font-bold text-blue-600">{userProfile?.credits?.free || 0}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-sm text-gray-500">E-CRD</p>
+                <p className="text-xl font-bold text-green-600">{userProfile?.credits?.paid || 0}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex h-full">
+          {/* 메인 콘텐츠 */}
+          <div className="flex-1 overflow-hidden">
+            <ScrollArea className="h-full">
+              <div className="p-6">
+                <div className="max-w-6xl mx-auto">
 
                 <Tabs defaultValue="subscriptions" className="space-y-6">
                   <TabsList className="grid w-full grid-cols-4">
@@ -666,6 +768,6 @@ export default function ShopPaymentSystem() {
           )}
         </div>
       </div>
-    </div>
+    </Layout>
   );
 }

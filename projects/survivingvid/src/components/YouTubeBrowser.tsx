@@ -9,6 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { useAuth } from '@/contexts/AuthContext';
+import Layout from '@/components/Layout';
 import {
   Search,
   Download,
@@ -32,7 +34,11 @@ import {
   News,
   Lightbulb,
   Heart,
-  MessageSquare
+  MessageSquare,
+  AlertCircle,
+  CheckCircle,
+  Star,
+  History
 } from 'lucide-react';
 
 interface YouTubeVideo {
@@ -103,10 +109,14 @@ const SORT_OPTIONS = [
 ];
 
 export default function YouTubeBrowser() {
+  const { user, userProfile } = useAuth();
   const [videos, setVideos] = useState<YouTubeVideo[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedVideo, setSelectedVideo] = useState<YouTubeVideo | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [downloadHistory, setDownloadHistory] = useState<string[]>([]);
   const [filters, setFilters] = useState<SearchFilters>({
     query: '',
     duration: 'any',
@@ -118,54 +128,103 @@ export default function YouTubeBrowser() {
 
   // YouTube API 검색 (데모용 가상 데이터)
   const searchVideos = useCallback(async () => {
-    if (!filters.query.trim()) return;
+    if (!filters.query.trim()) {
+      setError('검색어를 입력해주세요.');
+      return;
+    }
+
+    if (!user) {
+      setError('로그인이 필요합니다.');
+      return;
+    }
+
+    const availableCredits = (userProfile?.credits?.free || 0) + (userProfile?.credits?.paid || 0);
+    if (availableCredits < 1) {
+      setError('크레딧이 부족합니다. 검색에 1크레딧이 필요합니다.');
+      return;
+    }
 
     setLoading(true);
+    setError(null);
+    setSuccess(null);
+
     try {
       // 실제 구현에서는 YouTube Data API v3 사용
       // const API_KEY = process.env.YOUTUBE_API_KEY;
       // const response = await fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(filters.query)}&type=video&maxResults=50&key=${API_KEY}`);
 
       // 데모용 가상 데이터 생성
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise(resolve => setTimeout(resolve, 1500));
 
-      const mockVideos: YouTubeVideo[] = Array.from({ length: 20 }, (_, i) => ({
-        videoId: `video_${i}_${Date.now()}`,
-        title: `${filters.query} - 관련 동영상 ${i + 1}`,
-        description: `이것은 ${filters.query}와 관련된 동영상입니다. 테스트용 설명입니다.`,
-        channelTitle: `채널 ${i + 1}`,
-        channelId: `channel_${i}`,
-        publishedAt: new Date(Date.now() - Math.random() * 365 * 24 * 60 * 60 * 1000).toISOString(),
-        duration: `${Math.floor(Math.random() * 20) + 1}:${Math.floor(Math.random() * 60).toString().padStart(2, '0')}`,
-        viewCount: Math.floor(Math.random() * 1000000),
-        likeCount: Math.floor(Math.random() * 100000),
-        commentCount: Math.floor(Math.random() * 10000),
-        thumbnailUrl: `https://via.placeholder.com/320x180/ff0000/ffffff?text=Video+${i + 1}`,
-        tags: [filters.query, '테스트', '데모'],
-        categoryId: '22',
-        category: '엔터테인먼트'
-      }));
+      const mockVideos: YouTubeVideo[] = Array.from({ length: 20 }, (_, i) => {
+        const categories = ['엔터테인먼트', '음악', '교육', '스포츠', '게이밍', '뉴스', '뷰티', '요리'];
+        const category = categories[Math.floor(Math.random() * categories.length)];
+
+        return {
+          videoId: `video_${i}_${Date.now()}`,
+          title: `${filters.query} - 관련 동영상 ${i + 1}`,
+          description: `이것은 ${filters.query}와 관련된 동영상입니다. 카테고리: ${category}. 테스트용 상세 설명입니다.`,
+          channelTitle: `채널 ${i + 1}`,
+          channelId: `channel_${i}`,
+          publishedAt: new Date(Date.now() - Math.random() * 365 * 24 * 60 * 60 * 1000).toISOString(),
+          duration: `${Math.floor(Math.random() * 20) + 1}:${Math.floor(Math.random() * 60).toString().padStart(2, '0')}`,
+          viewCount: Math.floor(Math.random() * 1000000),
+          likeCount: Math.floor(Math.random() * 100000),
+          commentCount: Math.floor(Math.random() * 10000),
+          thumbnailUrl: `https://via.placeholder.com/320x180/ff0000/ffffff?text=Video+${i + 1}`,
+          tags: [filters.query, category, '테스트', '데모', 'AI생성'],
+          categoryId: '22',
+          category
+        };
+      });
 
       setVideos(mockVideos);
+      setSuccess(`${mockVideos.length}개의 동영상을 찾았습니다.`);
+
+      // 크레딧 차감 (실제로는 API 호출 후 성공 시에만)
+      // await deductCredits(user.uid, 1);
+
     } catch (error) {
       console.error('YouTube 검색 실패:', error);
+      setError('검색 중 오류가 발생했습니다. 다시 시도해주세요.');
     } finally {
       setLoading(false);
     }
-  }, [filters]);
+  }, [filters, user, userProfile]);
 
   // 비디오 다운로드
   const downloadVideo = async (video: YouTubeVideo) => {
+    if (!user) {
+      setError('로그인이 필요합니다.');
+      return;
+    }
+
+    const downloadCost = Math.ceil(parseInt(video.duration.split(':')[0]) / 5) + 2; // 5분당 1크레딧 + 기본 2크레딧
+    const availableCredits = (userProfile?.credits?.free || 0) + (userProfile?.credits?.paid || 0);
+
+    if (availableCredits < downloadCost) {
+      setError(`크레딧이 부족합니다. 다운로드에 ${downloadCost}크레딧이 필요합니다.`);
+      return;
+    }
+
     try {
+      setLoading(true);
+      setError(null);
+      setSuccess(null);
+
+      // 실제 구현에서는 YouTube 다운로드 API 사용
       const response = await fetch('/api/youtube/download', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${await user.getIdToken()}`
         },
         body: JSON.stringify({
+          videoId: video.videoId,
           url: `https://www.youtube.com/watch?v=${video.videoId}`,
           quality: '720p',
-          format: 'mp4'
+          format: 'mp4',
+          userId: user.uid
         })
       });
 
@@ -174,11 +233,23 @@ export default function YouTubeBrowser() {
       }
 
       const result = await response.json();
-      console.log('다운로드 결과:', result);
-      // 성공 알림 표시
+
+      // 다운로드 기록 추가
+      setDownloadHistory(prev => [video.videoId, ...prev.slice(0, 9)]);
+
+      // 북마크 자동 추가
+      setBookmarks(prev => new Set(prev).add(video.videoId));
+
+      setSuccess(`"${video.title}" 다운로드가 시작되었습니다. ${downloadCost}크레딧이 차감되었습니다.`);
+
+      // 크레딧 차감 (실제로는 API 호출 후 성공 시에만)
+      // await deductCredits(user.uid, downloadCost);
+
     } catch (error) {
       console.error('다운로드 실패:', error);
-      // 오류 알림 표시
+      setError('다운로드 중 오류가 발생했습니다. 다시 시도해주세요.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -416,236 +487,314 @@ export default function YouTubeBrowser() {
   );
 
   return (
-    <div className="h-screen flex flex-col">
-      {/* 검색 필터 */}
-      <div className="border-b bg-white p-4">
-        <div className="space-y-4">
-          <div className="flex items-center gap-4">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                <Input
-                  placeholder="YouTube 동영상 검색..."
-                  value={filters.query}
-                  onChange={(e) => setFilters(prev => ({ ...prev, query: e.target.value }))}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      searchVideos();
-                    }
-                  }}
-                  className="pl-10"
-                />
+    <Layout>
+      <div className="space-y-6">
+        {/* 알림 메시지 */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center gap-3">
+            <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
+            <p className="text-red-800">{error}</p>
+            <button
+              onClick={() => setError(null)}
+              className="ml-auto text-red-600 hover:text-red-800"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+
+        {success && (
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-center gap-3">
+            <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
+            <p className="text-green-800">{success}</p>
+            <button
+              onClick={() => setSuccess(null)}
+              className="ml-auto text-green-600 hover:text-green-800"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+
+        {/* 헤더 정보 */}
+        <div className="bg-white rounded-lg border p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">YouTube 탐색</h1>
+              <p className="text-gray-600">YouTube 동영상을 검색하고 다운로드하세요</p>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="text-right">
+                <p className="text-sm text-gray-500">검색 비용</p>
+                <p className="font-semibold">1 S-CRD</p>
+              </div>
+              <div className="text-right">
+                <p className="text-sm text-gray-500">다운로드 비용</p>
+                <p className="font-semibold">2+ S-CRD</p>
               </div>
             </div>
-            <Button onClick={searchVideos} disabled={loading}>
-              <Search className="w-4 h-4 mr-2" />
-              검색
-            </Button>
           </div>
 
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <Label htmlFor="duration">길이:</Label>
-              <Select
-                value={filters.duration}
-                onValueChange={(value: any) => setFilters(prev => ({ ...prev, duration: value }))}
-              >
-                <SelectTrigger id="duration" className="w-32">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {DURATION_OPTIONS.map(option => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          {/* 사용 가능 크레딧 표시 */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-gray-50 rounded-lg">
+            <div className="text-center">
+              <p className="text-sm text-gray-500">S-CRD</p>
+              <p className="text-xl font-bold text-blue-600">{userProfile?.credits?.free || 0}</p>
             </div>
-
-            <div className="flex items-center gap-2">
-              <Label htmlFor="upload-date">업로드:</Label>
-              <Select
-                value={filters.uploadDate}
-                onValueChange={(value: any) => setFilters(prev => ({ ...prev, uploadDate: value }))}
-              >
-                <SelectTrigger id="upload-date" className="w-32">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {UPLOAD_DATE_OPTIONS.map(option => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="text-center">
+              <p className="text-sm text-gray-500">E-CRD</p>
+              <p className="text-xl font-bold text-green-600">{userProfile?.credits?.paid || 0}</p>
             </div>
-
-            <div className="flex items-center gap-2">
-              <Label htmlFor="category">카테고리:</Label>
-              <Select
-                value={filters.category}
-                onValueChange={(value) => setFilters(prev => ({ ...prev, category: value }))}
-              >
-                <SelectTrigger id="category" className="w-40">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {VIDEO_CATEGORIES.map(category => (
-                    <SelectItem key={category.value} value={category.value}>
-                      {category.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="text-center">
+              <p className="text-sm text-gray-500">북마크</p>
+              <p className="text-xl font-bold text-purple-600">{bookmarks.size}</p>
             </div>
-
-            <div className="flex items-center gap-2">
-              <Label htmlFor="sort-by">정렬:</Label>
-              <Select
-                value={filters.sortBy}
-                onValueChange={(value: any) => setFilters(prev => ({ ...prev, sortBy: value }))}
-              >
-                <SelectTrigger id="sort-by" className="w-32">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {SORT_OPTIONS.map(option => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="flex-1" />
-
-            <div className="flex items-center gap-1 border rounded-md p-1">
-              <Button
-                variant={viewMode === 'grid' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setViewMode('grid')}
-              >
-                <Grid className="w-4 h-4" />
-              </Button>
-              <Button
-                variant={viewMode === 'list' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setViewMode('list')}
-              >
-                <List className="w-4 h-4" />
-              </Button>
+            <div className="text-center">
+              <p className="text-sm text-gray-500">다운로드 기록</p>
+              <p className="text-xl font-bold text-orange-600">{downloadHistory.length}</p>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* 결과 영역 */}
-      <div className="flex-1 overflow-hidden">
-        {loading ? (
-          <div className="h-full flex items-center justify-center">
-            <div className="text-center space-y-4">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-              <p className="text-gray-600">YouTube에서 동영상 검색 중...</p>
-            </div>
-          </div>
-        ) : videos.length === 0 ? (
-          <div className="h-full flex items-center justify-center">
-            <div className="text-center space-y-4">
-              <Video className="w-16 h-16 mx-auto text-gray-400" />
-              <h2 className="text-2xl font-semibold">YouTube 브라우저</h2>
-              <p className="text-gray-600">검색어를 입력하고 동영상을 찾아보세요</p>
-            </div>
-          </div>
-        ) : (
-          <ScrollArea className="h-full p-4">
-            <div className="mb-4">
-              <p className="text-sm text-gray-600">
-                {filters.query}에 대한 {videos.length}개의 검색 결과
-              </p>
-            </div>
-
-            {viewMode === 'grid' ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                {videos.map(renderVideoCard)}
+        {/* 검색 필터 */}
+        <div className="bg-white rounded-lg border p-6">
+          <div className="space-y-4">
+            <div className="flex items-center gap-4">
+              <div className="flex-1">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <Input
+                    placeholder="YouTube 동영상 검색..."
+                    value={filters.query}
+                    onChange={(e) => setFilters(prev => ({ ...prev, query: e.target.value }))}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        searchVideos();
+                      }
+                    }}
+                    className="pl-10"
+                  />
+                </div>
               </div>
-            ) : (
-              <div className="space-y-4">
-                {videos.map(renderVideoListItem)}
-              </div>
-            )}
-          </ScrollArea>
-        )}
-      </div>
+              <Button onClick={searchVideos} disabled={loading}>
+                <Search className="w-4 h-4 mr-2" />
+                검색 (1 S-CRD)
+              </Button>
+            </div>
 
-      {/* 비디오 미리보기 모달 */}
-      {selectedVideo && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-auto">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold line-clamp-1">{selectedVideo.title}</h2>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setSelectedVideo(null)}
+            <div className="flex flex-wrap items-center gap-4">
+              <div className="flex items-center gap-2">
+                <Label htmlFor="duration">길이:</Label>
+                <Select
+                  value={filters.duration}
+                  onValueChange={(value: any) => setFilters(prev => ({ ...prev, duration: value }))}
                 >
-                  ✕
+                  <SelectTrigger id="duration" className="w-32">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {DURATION_OPTIONS.map(option => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Label htmlFor="upload-date">업로드:</Label>
+                <Select
+                  value={filters.uploadDate}
+                  onValueChange={(value: any) => setFilters(prev => ({ ...prev, uploadDate: value }))}
+                >
+                  <SelectTrigger id="upload-date" className="w-32">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {UPLOAD_DATE_OPTIONS.map(option => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Label htmlFor="category">카테고리:</Label>
+                <Select
+                  value={filters.category}
+                  onValueChange={(value) => setFilters(prev => ({ ...prev, category: value }))}
+                >
+                  <SelectTrigger id="category" className="w-40">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {VIDEO_CATEGORIES.map(category => (
+                      <SelectItem key={category.value} value={category.value}>
+                        {category.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Label htmlFor="sort-by">정렬:</Label>
+                <Select
+                  value={filters.sortBy}
+                  onValueChange={(value: any) => setFilters(prev => ({ ...prev, sortBy: value }))}
+                >
+                  <SelectTrigger id="sort-by" className="w-32">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SORT_OPTIONS.map(option => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex-1" />
+
+              <div className="flex items-center gap-1 border rounded-md p-1">
+                <Button
+                  variant={viewMode === 'grid' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setViewMode('grid')}
+                >
+                  <Grid className="w-4 h-4" />
+                </Button>
+                <Button
+                  variant={viewMode === 'list' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setViewMode('list')}
+                >
+                  <List className="w-4 h-4" />
                 </Button>
               </div>
+            </div>
+          </div>
+        </div>
 
-              <div className="aspect-video bg-gray-200 rounded-lg mb-4">
-                <img
-                  src={selectedVideo.thumbnailUrl}
-                  alt={selectedVideo.title}
-                  className="w-full h-full object-cover rounded-lg"
-                />
+        {/* 결과 영역 */}
+        <div className="bg-white rounded-lg border">
+          {loading ? (
+            <div className="p-12 flex items-center justify-center">
+              <div className="text-center space-y-4">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+                <p className="text-gray-600">YouTube에서 동영상 검색 중...</p>
+              </div>
+            </div>
+          ) : videos.length === 0 ? (
+            <div className="p-12 flex items-center justify-center">
+              <div className="text-center space-y-4">
+                <Video className="w-16 h-16 mx-auto text-gray-400" />
+                <h2 className="text-2xl font-semibold">YouTube 브라우저</h2>
+                <p className="text-gray-600">검색어를 입력하고 동영상을 찾아보세요</p>
+              </div>
+            </div>
+          ) : (
+            <div className="p-6">
+              <div className="mb-4">
+                <p className="text-sm text-gray-600">
+                  "{filters.query}"에 대한 {videos.length}개의 검색 결과
+                </p>
               </div>
 
-              <div className="space-y-4">
-                <p className="text-gray-600">{selectedVideo.description}</p>
+              {viewMode === 'grid' ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                  {videos.map(renderVideoCard)}
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {videos.map(renderVideoListItem)}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
 
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                  <div>
-                    <Label className="text-gray-500">채널</Label>
-                    <p>{selectedVideo.channelTitle}</p>
-                  </div>
-                  <div>
-                    <Label className="text-gray-500">조회수</Label>
-                    <p>{formatViewCount(selectedVideo.viewCount)} 회</p>
-                  </div>
-                  <div>
-                    <Label className="text-gray-500">재생시간</Label>
-                    <p>{selectedVideo.duration}</p>
-                  </div>
-                  <div>
-                    <Label className="text-gray-500">업로드</Label>
-                    <p>{formatPublishedAt(selectedVideo.publishedAt)}</p>
-                  </div>
+        {/* 비디오 미리보기 모달 */}
+        {selectedVideo && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-auto">
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-xl font-semibold line-clamp-1">{selectedVideo.title}</h2>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setSelectedVideo(null)}
+                  >
+                    ✕
+                  </Button>
                 </div>
 
-                <div className="flex items-center justify-end gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={() => downloadVideo(selectedVideo)}
-                  >
-                    <Download className="w-4 h-4 mr-2" />
-                    다운로드
-                  </Button>
-                  <Button
-                    onClick={() => window.open(`https://www.youtube.com/watch?v=${selectedVideo.videoId}`, '_blank')}
-                  >
-                    <ExternalLink className="w-4 h-4 mr-2" />
-                    YouTube에서 보기
-                  </Button>
+                <div className="aspect-video bg-gray-200 rounded-lg mb-4">
+                  <img
+                    src={selectedVideo.thumbnailUrl}
+                    alt={selectedVideo.title}
+                    className="w-full h-full object-cover rounded-lg"
+                  />
+                </div>
+
+                <div className="space-y-4">
+                  <p className="text-gray-600">{selectedVideo.description}</p>
+
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                    <div>
+                      <Label className="text-gray-500">채널</Label>
+                      <p>{selectedVideo.channelTitle}</p>
+                    </div>
+                    <div>
+                      <Label className="text-gray-500">조회수</Label>
+                      <p>{formatViewCount(selectedVideo.viewCount)} 회</p>
+                    </div>
+                    <div>
+                      <Label className="text-gray-500">재생시간</Label>
+                      <p>{selectedVideo.duration}</p>
+                    </div>
+                    <div>
+                      <Label className="text-gray-500">업로드</Label>
+                      <p>{formatPublishedAt(selectedVideo.publishedAt)}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                    <div>
+                      <p className="text-sm text-gray-500">예상 다운로드 비용</p>
+                      <p className="font-semibold">
+                        {Math.ceil(parseInt(selectedVideo.duration.split(':')[0]) / 5) + 2} S-CRD
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        onClick={() => downloadVideo(selectedVideo)}
+                        disabled={loading}
+                      >
+                        <Download className="w-4 h-4 mr-2" />
+                        다운로드
+                      </Button>
+                      <Button
+                        onClick={() => window.open(`https://www.youtube.com/watch?v=${selectedVideo.videoId}`, '_blank')}
+                      >
+                        <ExternalLink className="w-4 h-4 mr-2" />
+                        YouTube에서 보기
+                      </Button>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
-    </div>
+        )}
+      </div>
+    </Layout>
   );
 }

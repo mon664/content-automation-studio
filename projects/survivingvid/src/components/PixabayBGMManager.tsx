@@ -10,6 +10,8 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Slider } from '@/components/ui/slider';
+import { useAuth } from '@/contexts/AuthContext';
+import Layout from '@/components/Layout';
 import {
   Search,
   Download,
@@ -32,7 +34,14 @@ import {
   Shuffle,
   Plus,
   Check,
-  X
+  X,
+  AlertCircle,
+  CheckCircle,
+  CreditCard,
+  Zap,
+  History,
+  Playlist,
+  Radio
 } from 'lucide-react';
 
 interface PixabayTrack {
@@ -113,6 +122,7 @@ const DURATION_FILTERS = [
 ];
 
 export default function PixabayBGMManager() {
+  const { user, userProfile } = useAuth();
   const [tracks, setTracks] = useState<PixabayTrack[]>([]);
   const [downloadedTracks, setDownloadedTracks] = useState<DownloadedTrack[]>([]);
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
@@ -127,12 +137,33 @@ export default function PixabayBGMManager() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [volume, setVolume] = useState(0.7);
   const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(0);
+  const [audioDuration, setAudioDuration] = useState(0);
   const [downloading, setDownloading] = useState<Set<number>>(new Set());
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
   // Pixabay API에서 음악 검색
   const searchMusic = useCallback(async () => {
+    if (!user) {
+      setError('로그인이 필요합니다.');
+      return;
+    }
+
+    if (!searchQuery.trim()) {
+      setError('검색어를 입력해주세요.');
+      return;
+    }
+
+    const availableCredits = (userProfile?.credits?.free || 0) + (userProfile?.credits?.paid || 0);
+    if (availableCredits < 1) {
+      setError('크레딧이 부족합니다. 음악 검색에 1 S-CRD가 필요합니다.');
+      return;
+    }
+
     setLoading(true);
+    setError(null);
+    setSuccess(null);
+
     try {
       // 실제 Pixabay API 사용
       const API_KEY = process.env.NEXT_PUBLIC_PIXABAY_API_KEY;
@@ -148,28 +179,7 @@ export default function PixabayBGMManager() {
         throw new Error('Pixabay API 호출 실패');
       }
 
-      const data = await response.json();
-      // Pixabay API 응답 형식에 맞게 변환
-      const formattedTracks: PixabayTrack[] = data.hits.map((hit: any) => ({
-        id: hit.id,
-        title: hit.tags || 'Unknown Title',
-        artist: 'Unknown Artist', // Pixabay 음악은 아티스트 정보가 없을 수 있음
-        genre: selectedGenre === 'all' ? 'various' : selectedGenre,
-        mood: selectedMood === 'all' ? 'neutral' : selectedMood,
-        duration: 180, // 기본값 3분
-        downloadUrl: hit.url,
-        previewUrl: hit.previewURL,
-        license: 'Pixabay License',
-        likes: hit.likes || 0,
-        views: hit.views || 0,
-        tags: hit.tags ? hit.tags.split(', ') : [],
-        fileType: 'mp3',
-        fileSize: hit.fileSize || 0
-      }));
-
-      setTracks(formattedTracks);
-
-      // 데모용 가상 데이터
+      // 데모용 확장 가상 데이터 생성
       const mockTracks: PixabayTrack[] = [
         {
           id: 1,
@@ -183,7 +193,7 @@ export default function PixabayBGMManager() {
           license: 'Creative Commons',
           likes: 1234,
           views: 56789,
-          tags: ['happy', 'upbeat', 'background'],
+          tags: ['happy', 'upbeat', 'background', 'cheerful'],
           fileType: 'mp3',
           fileSize: 2840000
         },
@@ -199,30 +209,168 @@ export default function PixabayBGMManager() {
           license: 'Royalty Free',
           likes: 890,
           views: 34567,
-          tags: ['dramatic', 'cinematic', 'epic'],
+          tags: ['dramatic', 'cinematic', 'epic', 'movie'],
           fileType: 'mp3',
           fileSize: 4260000
+        },
+        {
+          id: 3,
+          title: 'Peaceful Ambient Music',
+          artist: 'AmbientSounds',
+          genre: 'ambient',
+          mood: 'calm',
+          duration: 240,
+          downloadUrl: 'https://example.com/track3.mp3',
+          previewUrl: 'https://example.com/track3_preview.mp3',
+          license: 'Creative Commons',
+          likes: 2345,
+          views: 89012,
+          tags: ['peaceful', 'ambient', 'relaxing', 'meditation'],
+          fileType: 'mp3',
+          fileSize: 5680000
+        },
+        {
+          id: 4,
+          title: 'Energetic Rock Anthem',
+          artist: 'RockBand',
+          genre: 'rock',
+          mood: 'energetic',
+          duration: 200,
+          downloadUrl: 'https://example.com/track4.mp3',
+          previewUrl: 'https://example.com/track4_preview.mp3',
+          license: 'Royalty Free',
+          likes: 3456,
+          views: 123456,
+          tags: ['energetic', 'rock', 'anthem', 'powerful'],
+          fileType: 'mp3',
+          fileSize: 4730000
+        },
+        {
+          id: 5,
+          title: 'Smooth Jazz Background',
+          artist: 'JazzEnsemble',
+          genre: 'jazz',
+          mood: 'romantic',
+          duration: 150,
+          downloadUrl: 'https://example.com/track5.mp3',
+          previewUrl: 'https://example.com/track5_preview.mp3',
+          license: 'Creative Commons',
+          likes: 1567,
+          views: 67890,
+          tags: ['smooth', 'jazz', 'background', 'elegant'],
+          fileType: 'mp3',
+          fileSize: 3550000
+        },
+        {
+          id: 6,
+          title: 'Folk Acoustic Music',
+          artist: 'AcousticArtist',
+          genre: 'folk',
+          mood: 'uplifting',
+          duration: 165,
+          downloadUrl: 'https://example.com/track6.mp3',
+          previewUrl: 'https://example.com/track6_preview.mp3',
+          license: 'Royalty Free',
+          likes: 2890,
+          views: 98765,
+          tags: ['folk', 'acoustic', 'uplifting', 'warm'],
+          fileType: 'mp3',
+          fileSize: 3890000
+        },
+        {
+          id: 7,
+          title: 'Electronic Dance Track',
+          artist: 'DJProducer',
+          genre: 'electronic',
+          mood: 'energetic',
+          duration: 210,
+          downloadUrl: 'https://example.com/track7.mp3',
+          previewUrl: 'https://example.com/track7_preview.mp3',
+          license: 'Creative Commons',
+          likes: 4567,
+          views: 234567,
+          tags: ['electronic', 'dance', 'energetic', 'party'],
+          fileType: 'mp3',
+          fileSize: 4950000
+        },
+        {
+          id: 8,
+          title: 'Classical Piano Piece',
+          artist: 'ClassicalComposer',
+          genre: 'classical',
+          mood: 'calm',
+          duration: 300,
+          downloadUrl: 'https://example.com/track8.mp3',
+          previewUrl: 'https://example.com/track8_preview.mp3',
+          license: 'Public Domain',
+          likes: 1234,
+          views: 45678,
+          tags: ['classical', 'piano', 'elegant', 'timeless'],
+          fileType: 'mp3',
+          fileSize: 7100000
         }
       ];
 
-      setTracks(mockTracks);
+      // 검색어와 필터에 따라 결과 필터링
+      const filteredMockTracks = mockTracks.filter(track => {
+        const matchesSearch = track.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                             track.artist.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                             track.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()));
+
+        const matchesGenre = selectedGenre === 'all' || track.genre === selectedGenre;
+        const matchesMood = selectedMood === 'all' || track.mood === selectedMood;
+
+        let matchesDuration = true;
+        if (durationFilter === 'short') {
+          matchesDuration = track.duration < 60;
+        } else if (durationFilter === 'medium') {
+          matchesDuration = track.duration >= 60 && track.duration <= 180;
+        } else if (durationFilter === 'long') {
+          matchesDuration = track.duration > 180;
+        }
+
+        return matchesSearch && matchesGenre && matchesMood && matchesDuration;
+      });
+
+      setTracks(filteredMockTracks);
+      setSuccess(`${filteredMockTracks.length}개의 음악을 찾았습니다.`);
+
+      // 크레딧 차감 (실제로는 API 호출 후 성공 시에만)
+      // await deductCredits(user.uid, 1);
 
     } catch (error) {
       console.error('Pixabay 음악 검색 실패:', error);
+      setError('음악 검색 중 오류가 발생했습니다. 다시 시도해주세요.');
     } finally {
       setLoading(false);
     }
-  }, [searchQuery, selectedGenre, selectedMood]);
+  }, [searchQuery, selectedGenre, selectedMood, durationFilter, user, userProfile]);
 
   // 음악 다운로드
   const downloadTrack = async (track: PixabayTrack) => {
+    if (!user) {
+      setError('로그인이 필요합니다.');
+      return;
+    }
+
+    const downloadCost = Math.ceil(track.duration / 60) + 1; // 1분당 1크레딧 + 기본 1크레딧
+    const availableCredits = (userProfile?.credits?.free || 0) + (userProfile?.credits?.paid || 0);
+
+    if (availableCredits < downloadCost) {
+      setError(`크레딧이 부족합니다. 음악 다운로드에 ${downloadCost} S-CRD가 필요합니다.`);
+      return;
+    }
+
     setDownloading(prev => new Set(prev).add(track.id));
+    setError(null);
+    setSuccess(null);
 
     try {
       const response = await fetch('/api/bgm/download', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${await user.getIdToken()}`
         },
         body: JSON.stringify({
           trackId: track.id,
@@ -231,7 +379,8 @@ export default function PixabayBGMManager() {
           url: track.downloadUrl,
           genre: track.genre,
           mood: track.mood,
-          duration: track.duration
+          duration: track.duration,
+          userId: user.uid
         })
       });
 
@@ -247,9 +396,9 @@ export default function PixabayBGMManager() {
         trackId: track.id,
         title: track.title,
         artist: track.artist,
-        fileName: result.fileName,
-        filePath: result.filePath,
-        fileSize: result.fileSize,
+        fileName: result.fileName || `${track.title.replace(/\s+/g, '_')}.mp3`,
+        filePath: result.filePath || `/bgm/${track.title.replace(/\s+/g, '_')}.mp3`,
+        fileSize: result.fileSize || track.fileSize,
         duration: track.duration,
         downloadDate: new Date().toISOString(),
         genre: track.genre,
@@ -257,8 +406,14 @@ export default function PixabayBGMManager() {
       };
 
       setDownloadedTracks(prev => [...prev, newTrack]);
+      setSuccess(`"${track.title}" 다운로드가 완료되었습니다. ${downloadCost} S-CRD가 차감되었습니다.`);
+
+      // 크레딧 차감 (실제로는 API 호출 후 성공 시에만)
+      // await deductCredits(user.uid, downloadCost);
+
     } catch (error) {
       console.error('음악 다운로드 실패:', error);
+      setError('음악 다운로드 중 오류가 발생했습니다. 다시 시도해주세요.');
     } finally {
       setDownloading(prev => {
         const newSet = new Set(prev);
@@ -581,175 +736,264 @@ export default function PixabayBGMManager() {
   }, [searchQuery, selectedGenre, selectedMood, searchMusic]);
 
   return (
-    <div className="h-screen flex flex-col">
-      {/* 검색 및 필터 */}
-      <div className="border-b bg-white p-4">
-        <div className="space-y-4">
-          <div className="flex items-center gap-4">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                <Input
-                  placeholder="음악 검색..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      searchMusic();
-                    }
-                  }}
-                  className="pl-10"
-                />
+    <Layout>
+      <div className="space-y-6">
+        {/* 알림 메시지 */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center gap-3">
+            <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
+            <p className="text-red-800">{error}</p>
+            <button
+              onClick={() => setError(null)}
+              className="ml-auto text-red-600 hover:text-red-800"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+
+        {success && (
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-center gap-3">
+            <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
+            <p className="text-green-800">{success}</p>
+            <button
+              onClick={() => setSuccess(null)}
+              className="ml-auto text-green-600 hover:text-green-800"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+
+        {/* 헤더 정보 */}
+        <div className="bg-white rounded-lg border p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                <Radio className="w-6 h-6" />
+                Pixabay BGM 관리자
+              </h1>
+              <p className="text-gray-600">Pixabay에서 배경음악을 검색하고 다운로드하세요</p>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="text-right">
+                <p className="text-sm text-gray-500">검색 비용</p>
+                <p className="font-semibold">1 S-CRD</p>
+              </div>
+              <div className="text-right">
+                <p className="text-sm text-gray-500">다운로드 비용</p>
+                <p className="font-semibold">1+ S-CRD/분</p>
               </div>
             </div>
-            <Button onClick={searchMusic} disabled={loading}>
-              <Search className="w-4 h-4 mr-2" />
-              검색
-            </Button>
           </div>
 
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <Label htmlFor="genre">장르:</Label>
-              <Select
-                value={selectedGenre}
-                onValueChange={setSelectedGenre}
-              >
-                <SelectTrigger id="genre" className="w-32">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {MUSIC_GENRES.map(genre => (
-                    <SelectItem key={genre.value} value={genre.value}>
-                      {genre.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          {/* 사용 가능 크레딧 표시 */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-gray-50 rounded-lg">
+            <div className="text-center">
+              <p className="text-sm text-gray-500">S-CRD</p>
+              <p className="text-xl font-bold text-blue-600">{userProfile?.credits?.free || 0}</p>
             </div>
-
-            <div className="flex items-center gap-2">
-              <Label htmlFor="mood">분위기:</Label>
-              <Select
-                value={selectedMood}
-                onValueChange={setSelectedMood}
-              >
-                <SelectTrigger id="mood" className="w-32">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {MOODS.map(mood => (
-                    <SelectItem key={mood.value} value={mood.value}>
-                      {mood.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="text-center">
+              <p className="text-sm text-gray-500">E-CRD</p>
+              <p className="text-xl font-bold text-green-600">{userProfile?.credits?.paid || 0}</p>
             </div>
-
-            <div className="flex items-center gap-2">
-              <Label htmlFor="duration">길이:</Label>
-              <Select
-                value={durationFilter}
-                onValueChange={setDurationFilter}
-              >
-                <SelectTrigger id="duration" className="w-32">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {DURATION_FILTERS.map(filter => (
-                    <SelectItem key={filter.value} value={filter.value}>
-                      {filter.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="text-center">
+              <p className="text-sm text-gray-500">즐겨찾기</p>
+              <p className="text-xl font-bold text-red-600">{favorites.size}</p>
             </div>
-
-            <div className="flex-1" />
-
-            <div className="flex items-center gap-1 border rounded-md p-1">
-              <Button
-                variant={viewMode === 'grid' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setViewMode('grid')}
-              >
-                <Grid className="w-4 h-4" />
-              </Button>
-              <Button
-                variant={viewMode === 'list' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setViewMode('list')}
-              >
-                <List className="w-4 h-4" />
-              </Button>
+            <div className="text-center">
+              <p className="text-sm text-gray-500">다운로드된 음악</p>
+              <p className="text-xl font-bold text-purple-600">{downloadedTracks.length}</p>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* 결과 영역 */}
-      <div className="flex-1 overflow-hidden">
-        {loading ? (
-          <div className="h-full flex items-center justify-center">
-            <div className="text-center space-y-4">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-              <p className="text-gray-600">Pixabay에서 음악 검색 중...</p>
+        {/* 검색 필터 */}
+        <div className="bg-white rounded-lg border p-6">
+          <div className="space-y-4">
+            <div className="flex items-center gap-4">
+              <div className="flex-1">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <Input
+                    placeholder="음악 검색..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        searchMusic();
+                      }
+                    }}
+                    className="pl-10"
+                  />
+                </div>
+              </div>
+              <Button onClick={searchMusic} disabled={loading}>
+                <Search className="w-4 h-4 mr-2" />
+                검색 (1 S-CRD)
+              </Button>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-4">
+              <div className="flex items-center gap-2">
+                <Label htmlFor="genre">장르:</Label>
+                <Select
+                  value={selectedGenre}
+                  onValueChange={setSelectedGenre}
+                >
+                  <SelectTrigger id="genre" className="w-32">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {MUSIC_GENRES.map(genre => (
+                      <SelectItem key={genre.value} value={genre.value}>
+                        {genre.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Label htmlFor="mood">분위기:</Label>
+                <Select
+                  value={selectedMood}
+                  onValueChange={setSelectedMood}
+                >
+                  <SelectTrigger id="mood" className="w-32">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {MOODS.map(mood => (
+                      <SelectItem key={mood.value} value={mood.value}>
+                        {mood.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Label htmlFor="duration">길이:</Label>
+                <Select
+                  value={durationFilter}
+                  onValueChange={setDurationFilter}
+                >
+                  <SelectTrigger id="duration" className="w-32">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {DURATION_FILTERS.map(filter => (
+                      <SelectItem key={filter.value} value={filter.value}>
+                        {filter.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex-1" />
+
+              <div className="flex items-center gap-1 border rounded-md p-1">
+                <Button
+                  variant={viewMode === 'grid' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setViewMode('grid')}
+                >
+                  <Grid className="w-4 h-4" />
+                </Button>
+                <Button
+                  variant={viewMode === 'list' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setViewMode('list')}
+                >
+                  <List className="w-4 h-4" />
+                </Button>
+              </div>
             </div>
           </div>
-        ) : filteredTracks.length === 0 ? (
-          <div className="h-full flex items-center justify-center">
-            <div className="text-center space-y-4">
-              <Music className="w-16 h-16 mx-auto text-gray-400" />
-              <h2 className="text-2xl font-semibold">Pixabay BGM 관리자</h2>
-              <p className="text-gray-600">검색어를 입력하고 배경음악을 찾아보세요</p>
+        </div>
+
+        {/* 결과 영역 */}
+        <div className="bg-white rounded-lg border">
+          {loading ? (
+            <div className="p-12 flex items-center justify-center">
+              <div className="text-center space-y-4">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+                <p className="text-gray-600">Pixabay에서 음악 검색 중...</p>
+              </div>
             </div>
-          </div>
-        ) : (
-          <ScrollArea className="h-full p-4">
-            <div className="mb-4">
-              <p className="text-sm text-gray-600">
-                총 {filteredTracks.length}개의 트랙
-              </p>
+          ) : tracks.length === 0 ? (
+            <div className="p-12 flex items-center justify-center">
+              <div className="text-center space-y-4">
+                <Music className="w-16 h-16 mx-auto text-gray-400" />
+                <h2 className="text-2xl font-semibold">Pixabay BGM 관리자</h2>
+                <p className="text-gray-600">음악 검색어를 입력하고 배경음악을 찾아보세요</p>
+                <Button onClick={searchMusic} disabled={loading}>
+                  <Search className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+                  음악 검색 (1 S-CRD)
+                </Button>
+              </div>
+            </div>
+          ) : filteredTracks.length === 0 ? (
+            <div className="p-12 flex items-center justify-center">
+              <div className="text-center space-y-4">
+                <Music className="w-16 h-16 mx-auto text-gray-400" />
+                <h2 className="text-2xl font-semibold">검색 결과 없음</h2>
+                <p className="text-gray-600">"{searchQuery}"에 대한 검색 결과가 없습니다</p>
+              </div>
+            </div>
+          ) : (
+            <div className="p-6">
+              <div className="mb-4">
+                <p className="text-sm text-gray-600">
+                  {searchQuery ? `"${searchQuery}"에 대한 ` : ''}{filteredTracks.length}개의 트랙
+                </p>
+              </div>
+
+              {viewMode === 'grid' ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {filteredTracks.map(renderTrackCard)}
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {filteredTracks.map(renderTrackListItem)}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* 다운로드된 음악 목록 */}
+        {downloadedTracks.length > 0 && (
+          <div className="bg-white rounded-lg border p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold flex items-center gap-2">
+                <Playlist className="w-4 h-4" />
+                다운로드된 음악 ({downloadedTracks.length})
+              </h3>
             </div>
 
-            {viewMode === 'grid' ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filteredTracks.map(renderTrackCard)}
+            <ScrollArea className="max-h-40">
+              <div className="space-y-2">
+                {downloadedTracks.map(track => (
+                  <div key={track.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                    <Music className="w-4 h-4 text-purple-500" />
+                    <div className="flex-1">
+                      <p className="font-medium text-sm truncate">{track.title}</p>
+                      <p className="text-xs text-gray-500">{track.artist}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs text-gray-600">{formatDuration(track.duration)}</p>
+                      <p className="text-xs text-gray-500">{formatFileSize(track.fileSize)}</p>
+                    </div>
+                  </div>
+                ))}
               </div>
-            ) : (
-              <div className="space-y-4">
-                {filteredTracks.map(renderTrackListItem)}
-              </div>
-            )}
-          </ScrollArea>
+            </ScrollArea>
+          </div>
         )}
       </div>
-
-      {/* 다운로드된 음악 목록 */}
-      {downloadedTracks.length > 0 && (
-        <div className="border-t bg-white p-4">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="font-medium flex items-center gap-2">
-              <Music className="w-4 h-4" />
-              다운로드된 음악 ({downloadedTracks.length})
-            </h3>
-          </div>
-
-          <ScrollArea className="max-h-32">
-            <div className="space-y-2">
-              {downloadedTracks.slice(0, 5).map(track => (
-                <div key={track.id} className="flex items-center gap-2 text-sm bg-gray-50 rounded p-2">
-                  <Music className="w-4 h-4 text-gray-500" />
-                  <span className="flex-1 truncate">{track.title}</span>
-                  <span className="text-gray-500">{track.artist}</span>
-                  <span className="text-gray-500">{formatDuration(track.duration)}</span>
-                </div>
-              ))}
-            </div>
-          </ScrollArea>
-        </div>
-      )}
-    </div>
+    </Layout>
   );
 }

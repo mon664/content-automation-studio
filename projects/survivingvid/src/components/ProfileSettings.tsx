@@ -12,6 +12,8 @@ import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useAuth } from '@/contexts/AuthContext';
+import Layout from '@/components/Layout';
 import {
   User,
   Mail,
@@ -48,7 +50,15 @@ import {
   BarChart3,
   Users,
   Heart,
-  Share2
+  Share2,
+  AlertCircle,
+  CheckCircle,
+  CreditCard,
+  Settings,
+  Calendar,
+  Video,
+  Crown,
+  Gift
 } from 'lucide-react';
 
 interface UserProfile {
@@ -129,53 +139,57 @@ const ACHIEVEMENTS = [
 ];
 
 export default function ProfileSettings() {
-  const [profile, setProfile] = useState<UserProfile>({
-    id: 'user_123',
-    username: 'user123',
-    email: 'user@example.com',
-    fullName: '홍길동',
-    bio: 'AI 영상 생성을 좋아합니다.',
-    avatar: '/default-avatar.png',
-    phone: '+82 10-1234-5678',
-    location: '서울, 대한민국',
-    website: 'https://example.com',
-    language: 'ko',
-    timezone: 'Asia/Seoul',
-    joinDate: '2024-01-15',
-    lastLogin: '2024-11-24T10:30:00Z',
-    isVerified: true,
-    status: 'active',
-    role: 'user'
-  });
-
-  const [preferences, setPreferences] = useState<UserPreferences>({
-    theme: 'light',
-    language: 'ko',
-    emailNotifications: true,
-    pushNotifications: true,
-    marketingEmails: false,
-    autoSave: true,
-    defaultVideoQuality: '1080p',
-    autoPlayPreviews: true,
-    showAdvancedOptions: false,
-    compactMode: false
-  });
-
-  const [stats, setStats] = useState<UserStats>({
-    videosCreated: 47,
-    totalViews: 12580,
-    totalLikes: 892,
-    totalComments: 156,
-    totalDownloads: 234,
-    storageUsed: 2.3 * 1024 * 1024 * 1024, // 2.3GB in bytes
-    storageLimit: 10 * 1024 * 1024 * 1024, // 10GB in bytes
-    subscription: 'premium',
-    joinDate: '2024-01-15',
-    streak: 12,
-    achievements: ['first_video', 'creator_10', 'views_1000', 'likes_100', 'streak_7', 'early_adopter']
-  });
-
+  const { user, userProfile, updateUserProfile } = useAuth();
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+
+  const [profile, setProfile] = useState<UserProfile>(() => ({
+    id: userProfile?.id || user?.uid || 'user_123',
+    username: userProfile?.username || user?.displayName || 'user123',
+    email: userProfile?.email || user?.email || 'user@example.com',
+    fullName: userProfile?.fullName || user?.displayName || '홍길동',
+    bio: userProfile?.bio || 'AI 영상 생성을 좋아합니다.',
+    avatar: userProfile?.avatar || user?.photoURL || '/default-avatar.png',
+    phone: userProfile?.phone || '+82 10-1234-5678',
+    location: userProfile?.location || '서울, 대한민국',
+    website: userProfile?.website || 'https://example.com',
+    language: userProfile?.language || 'ko',
+    timezone: userProfile?.timezone || 'Asia/Seoul',
+    joinDate: userProfile?.joinDate || user?.metadata?.creationTime ? new Date(user.metadata.creationTime).toISOString().split('T')[0] : '2024-01-15',
+    lastLogin: userProfile?.lastLogin || new Date().toISOString(),
+    isVerified: userProfile?.isVerified || user?.emailVerified || false,
+    status: userProfile?.status || 'active',
+    role: userProfile?.role || 'user'
+  }));
+
+  const [preferences, setPreferences] = useState<UserPreferences>(() => ({
+    theme: userProfile?.preferences?.theme || 'light',
+    language: userProfile?.preferences?.language || 'ko',
+    emailNotifications: userProfile?.preferences?.emailNotifications ?? true,
+    pushNotifications: userProfile?.preferences?.pushNotifications ?? true,
+    marketingEmails: userProfile?.preferences?.marketingEmails ?? false,
+    autoSave: userProfile?.preferences?.autoSave ?? true,
+    defaultVideoQuality: userProfile?.preferences?.defaultVideoQuality || '1080p',
+    autoPlayPreviews: userProfile?.preferences?.autoPlayPreviews ?? true,
+    showAdvancedOptions: userProfile?.preferences?.showAdvancedOptions ?? false,
+    compactMode: userProfile?.preferences?.compactMode ?? false
+  }));
+
+  const [stats, setStats] = useState<UserStats>(() => ({
+    videosCreated: userProfile?.stats?.videosCreated || 47,
+    totalViews: userProfile?.stats?.totalViews || 12580,
+    totalLikes: userProfile?.stats?.totalLikes || 892,
+    totalComments: userProfile?.stats?.totalComments || 156,
+    totalDownloads: userProfile?.stats?.totalDownloads || 234,
+    storageUsed: userProfile?.stats?.storageUsed || 2.3 * 1024 * 1024 * 1024, // 2.3GB in bytes
+    storageLimit: userProfile?.stats?.storageLimit || (userProfile?.subscription === 'premium' ? 10 : 2) * 1024 * 1024 * 1024,
+    subscription: userProfile?.subscription || 'premium',
+    joinDate: userProfile?.stats?.joinDate || '2024-01-15',
+    streak: userProfile?.stats?.streak || 12,
+    achievements: userProfile?.stats?.achievements || ['first_video', 'creator_10', 'views_1000', 'likes_100', 'streak_7', 'early_adopter']
+  }));
+
   const [passwords, setPasswords] = useState({
     current: '',
     new: '',
@@ -189,19 +203,27 @@ export default function ProfileSettings() {
 
   // 프로필 정보 업데이트
   const updateProfile = async () => {
-    setSaving(true);
-    try {
-      // 실제 API 호출
-      // const response = await fetch('/api/user/profile', {
-      //   method: 'PUT',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify(profile)
-      // });
+    if (!user) {
+      setError('로그인이 필요합니다.');
+      return;
+    }
 
-      await new Promise(resolve => setTimeout(resolve, 1000)); // 데모용
-      console.log('프로필 업데이트 완료');
+    setSaving(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      // 실제 API 호출 또는 updateUserProfile 사용
+      await updateUserProfile({
+        ...profile,
+        preferences,
+        stats
+      });
+
+      setSuccess('프로필이 성공적으로 업데이트되었습니다.');
     } catch (error) {
       console.error('프로필 업데이트 실패:', error);
+      setError('프로필 업데이트 중 오류가 발생했습니다. 다시 시도해주세요.');
     } finally {
       setSaving(false);
     }
@@ -235,19 +257,27 @@ export default function ProfileSettings() {
 
   // 설정 저장
   const savePreferences = async () => {
-    setSaving(true);
-    try {
-      // 실제 API 호출
-      // const response = await fetch('/api/user/preferences', {
-      //   method: 'PUT',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify(preferences)
-      // });
+    if (!user) {
+      setError('로그인이 필요합니다.');
+      return;
+    }
 
-      await new Promise(resolve => setTimeout(resolve, 1000)); // 데모용
-      console.log('설정 저장 완료');
+    setSaving(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      // 실제 API 호출 또는 updateUserProfile 사용
+      await updateUserProfile({
+        ...profile,
+        preferences,
+        stats
+      });
+
+      setSuccess('설정이 성공적으로 저장되었습니다.');
     } catch (error) {
       console.error('설정 저장 실패:', error);
+      setError('설정 저장 중 오류가 발생했습니다. 다시 시도해주세요.');
     } finally {
       setSaving(false);
     }
@@ -291,9 +321,36 @@ export default function ProfileSettings() {
   };
 
   return (
-    <div className="h-screen bg-gray-50">
-      <ScrollArea className="h-full">
-        <div className="max-w-6xl mx-auto p-6 space-y-6">
+    <Layout>
+      <div className="space-y-6">
+        {/* 알림 메시지 */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center gap-3">
+            <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
+            <p className="text-red-800">{error}</p>
+            <button
+              onClick={() => setError(null)}
+              className="ml-auto text-red-600 hover:text-red-800"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+
+        {success && (
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-center gap-3">
+            <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
+            <p className="text-green-800">{success}</p>
+            <button
+              onClick={() => setSuccess(null)}
+              className="ml-auto text-green-600 hover:text-green-800"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+
+        <div className="max-w-6xl mx-auto space-y-6">
           {/* 프로필 헤더 */}
           <Card>
             <CardContent className="p-6">
@@ -350,7 +407,7 @@ export default function ProfileSettings() {
                       </div>
                     )}
                     <div className="flex items-center gap-1">
-                      <Calendar className="w-4 h-4" />
+                      <Clock className="w-4 h-4" />
                       <span>{formatDate(profile.joinDate)} 가입</span>
                     </div>
                   </div>
@@ -900,7 +957,7 @@ export default function ProfileSettings() {
             </TabsContent>
           </Tabs>
         </div>
-      </ScrollArea>
-    </div>
+      </div>
+    </Layout>
   );
 }

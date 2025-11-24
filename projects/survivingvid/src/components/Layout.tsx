@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
+import { useAuth } from '@/contexts/AuthContext';
 import {
   User,
   Download,
@@ -29,14 +30,15 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
+  const { user, userProfile, logout } = useAuth();
 
-  // AutoVid 12개 메뉴와 동일한 순서
+  // AutoVid 12개 메뉴와 동일한 순서 - 실제 파일 경로와 일치
   const menuItems = [
     {
-      id: 'login',
-      title: '로그인',
-      icon: User,
-      href: '/login'
+      id: 'credits',
+      title: '크레딧',
+      icon: CreditCard,
+      href: '/credits'
     },
     {
       id: 'download',
@@ -54,7 +56,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       id: 'auto',
       title: '자동영상생성',
       icon: Bot,
-      href: '/auto'
+      href: '/'
     },
     {
       id: 'best',
@@ -66,25 +68,25 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       id: 'template',
       title: 'Template',
       icon: FileText,
-      href: '/template'
+      href: '/template-editor'
     },
     {
       id: 'youtube',
       title: '유튜브 탐색',
       icon: Globe,
-      href: '/youtube'
+      href: '/youtube-browser'
     },
     {
       id: 'fonts',
       title: 'Fonts Download',
       icon: Type,
-      href: '/fonts'
+      href: '/google-fonts'
     },
     {
       id: 'bgm',
       title: 'BGM',
       icon: Music,
-      href: '/bgm'
+      href: '/pixabay-bgm'
     },
     {
       id: 'profile',
@@ -157,15 +159,29 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         <div className="sidebar-footer absolute bottom-0 left-0 right-0 p-4 border-t">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-white text-sm font-medium">
-                U
-              </div>
+              {user?.photoURL ? (
+                <img
+                  src={user.photoURL}
+                  alt="Profile"
+                  className="w-8 h-8 rounded-full object-cover"
+                />
+              ) : (
+                <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-white text-sm font-medium">
+                  {user?.displayName?.charAt(0) || 'U'}
+                </div>
+              )}
               <div>
-                <div className="text-sm font-medium">User</div>
-                <div className="text-xs text-muted-foreground">FREE</div>
+                <div className="text-sm font-medium">{user?.displayName || 'User'}</div>
+                <div className="text-xs text-muted-foreground">
+                  {userProfile?.subscription?.plan?.toUpperCase() || 'FREE'}
+                </div>
               </div>
             </div>
-            <button className="p-2 hover:bg-gray-100 rounded">
+            <button
+              onClick={logout}
+              className="p-2 hover:bg-gray-100 rounded"
+              title="로그아웃"
+            >
               <LogOut className="h-4 w-4" />
             </button>
           </div>
@@ -173,11 +189,11 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           <div className="flex items-center justify-between text-sm">
             <span className="flex items-center gap-1">
               <CreditCard className="h-3 w-3" />
-              S-CRD: 0.00
+              S-CRD: {userProfile?.credits?.free || 0}
             </span>
             <span className="flex items-center gap-1">
               <CreditCard className="h-3 w-3" />
-              E-CRD: 10.00
+              E-CRD: {userProfile?.credits?.paid || 0}
             </span>
           </div>
         </div>
@@ -205,24 +221,38 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               <div className="hidden md:flex items-center gap-4 text-sm">
                 <span className="badge badge-primary flex items-center gap-1">
                   <CreditCard className="h-3 w-3" />
-                  S-CRD: 0.00
+                  S-CRD: {userProfile?.credits?.free || 0}
                 </span>
                 <span className="badge badge-success flex items-center gap-1">
                   <CreditCard className="h-3 w-3" />
-                  E-CRD: 10.00
+                  E-CRD: {userProfile?.credits?.paid || 0}
                 </span>
               </div>
 
               {/* 사용자 프로필 (데스크톱) */}
               <div className="hidden md:flex items-center gap-3">
-                <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-white text-sm font-medium">
-                  U
-                </div>
+                {user?.photoURL ? (
+                  <img
+                    src={user.photoURL}
+                    alt="Profile"
+                    className="w-8 h-8 rounded-full object-cover"
+                  />
+                ) : (
+                  <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-white text-sm font-medium">
+                    {user?.displayName?.charAt(0) || 'U'}
+                  </div>
+                )}
                 <div className="text-sm">
-                  <div className="font-medium">User</div>
-                  <div className="text-muted-foreground">FREE</div>
+                  <div className="font-medium">{user?.displayName || 'User'}</div>
+                  <div className="text-muted-foreground">
+                    {userProfile?.subscription?.plan?.toUpperCase() || 'FREE'}
+                  </div>
                 </div>
-                <button className="p-2 hover:bg-gray-100 rounded">
+                <button
+                  onClick={logout}
+                  className="p-2 hover:bg-gray-100 rounded"
+                  title="로그아웃"
+                >
                   <LogOut className="h-4 w-4" />
                 </button>
               </div>

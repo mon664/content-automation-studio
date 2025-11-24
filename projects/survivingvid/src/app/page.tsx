@@ -1,13 +1,36 @@
-import React from 'react';
+'use client';
+
+import React, { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
 import Layout from '@/components/Layout';
 import AutoVideoGeneration from '@/components/AutoVideoGeneration';
 
-const HomePage: React.FC = () => {
+export default function HomePage() {
+  const { user, loading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push('/login');
+    }
+  }, [user, loading, router]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return null; // 리다이렉션 중이므로 아무것도 렌더링하지 않음
+  }
+
   return (
     <Layout>
       <AutoVideoGeneration />
     </Layout>
   );
-};
-
-export default HomePage;
+}

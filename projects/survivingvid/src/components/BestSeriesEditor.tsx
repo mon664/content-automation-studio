@@ -1,7 +1,9 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useAuth } from '@/contexts/AuthContext';
+import Layout from '@/components/Layout';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -13,11 +15,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
+import { Separator } from '@/components/ui/separator';
 import {
   Play, Pause, Save, Plus, Trash2, Copy,
   Star, Zap, Layers, Clock, Film,
   FileText, Settings, ChevronRight,
-  ChevronDown, Eye, Edit, Check
+  ChevronDown, Eye, Edit, Check, Download,
+  CreditCard, Wand2, Sparkles, Loader2,
+  FolderOpen, Video, BarChart3, Calendar
 } from 'lucide-react';
 
 interface SeriesEpisode {
@@ -49,11 +54,14 @@ interface Series {
 }
 
 const BestSeriesEditor: React.FC = () => {
+  const { user, userProfile } = useAuth();
   const [series, setSeries] = useState<Series[]>([]);
   const [selectedSeries, setSelectedSeries] = useState<Series | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationProgress, setGenerationProgress] = useState(0);
   const [currentStep, setCurrentStep] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   // 폼 상태
   const [formData, setFormData] = useState({
@@ -70,12 +78,34 @@ const BestSeriesEditor: React.FC = () => {
     batchMode: true
   });
 
+  // 크레딧 계산
+  const calculateSeriesCredits = (totalEpisodes: number): number => {
+    let credits = 5; // 기본 크레딧
+    credits += totalEpisodes * 2; // 에피소드당 2 크레딧
+    return credits;
+  };
+
   // 시리즈 생성
-  const handleCreateSeries = () => {
-    if (!formData.seriesName.trim() || !formData.mainTopic.trim()) {
-      alert('시리즈명과 메인 주제를 입력해주세요.');
+  const handleCreateSeries = async () => {
+    if (!user) {
+      setError('로그인이 필요합니다.');
       return;
     }
+
+    if (!formData.seriesName.trim() || !formData.mainTopic.trim()) {
+      setError('시리즈명과 메인 주제를 입력해주세요.');
+      return;
+    }
+
+    const requiredCredits = calculateSeriesCredits(formData.totalEpisodes);
+    const availableCredits = (userProfile?.credits?.free || 0) + (userProfile?.credits?.paid || 0);
+
+    if (availableCredits < requiredCredits) {
+      setError(`크레딧이 부족합니다. 필요한 크레딧: ${requiredCredits}, 보유 크레딧: ${availableCredits}`);
+      return;
+    }
+
+    setError(null);
 
     const newSeries: Series = {
       id: 'series-' + Date.now(),
@@ -106,12 +136,26 @@ const BestSeriesEditor: React.FC = () => {
       newSeries.episodes.push(episode);
     }
 
-    setSeries(prev => [...prev, newSeries]);
-    setSelectedSeries(newSeries);
+    try {
+      // 크레딧 차감
+      // await CreditService.spendCredits(user.uid, 'series_creation', requiredCredits, {
+      //   seriesName: formData.seriesName,
+      //   totalEpisodes: formData.totalEpisodes
+      // });
 
-    // 자동 생성 옵션이면 바로 생성 시작
-    if (formData.autoGenerate) {
-      handleGenerateAllEpisodes(newSeries);
+      setSeries(prev => [...prev, newSeries]);
+      setSelectedSeries(newSeries);
+      setSuccessMessage('시리즈가 성공적으로 생성되었습니다!');
+
+      // 자동 생성 옵션이면 바로 생성 시작
+      if (formData.autoGenerate) {
+        setTimeout(() => {
+          handleGenerateAllEpisodes(newSeries);
+        }, 1000);
+      }
+    } catch (error) {
+      console.error('시리즈 생성 오류:', error);
+      setError('시리즈 생성에 실패했습니다. 다시 시도해주세요.');
     }
   };
 
@@ -278,14 +322,51 @@ const BestSeriesEditor: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Star className="h-5 w-5" />
-            베스트 시리즈
-          </CardTitle>
-        </CardHeader>
+    <Layout>
+      <div className="max-w-6xl mx-auto space-y-6">
+        {/* 페이지 헤더 */}
+        <div className="text-center">
+          <h1 className="text-3xl font-bold text-gray-900">베스트 시리즈 관리</h1>
+          <p className="text-gray-600 mt-2">연관된 영상 시리즈를 효율적으로 생성하고 관리하세요</p>
+          <div className="flex items-center justify-center gap-2 mt-2">
+            <Badge variant="secondary" className="flex items-center gap-1">
+              <Sparkles className="w-3 h-3" />
+              AI 자동 생성
+            </Badge>
+            <Badge variant="secondary" className="flex items-center gap-1">
+              <Layers className="w-3 h-3" />
+              에피소드 관리
+            </Badge>
+            <Badge variant="secondary" className="flex items-center gap-1">
+              <BarChart3 className="w-3 h-3" />
+              일괄 처리
+            </Badge>
+          </div>
+        </div>
+
+        {/* 에러/성공 메시지 */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+            <p className="text-sm text-red-800">{error}</p>
+          </div>
+        )}
+
+        {successMessage && (
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+            <p className="text-sm text-green-800">{successMessage}</p>
+          </div>
+        )}
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Star className="w-5 h-5" />
+              베스트 시리즈 제작
+            </CardTitle>
+            <CardDescription>
+              시리즈를 생성하고 에피소드를 관리하여 콘텐츠 제작 효율을 높이세요
+            </CardDescription>
+          </CardHeader>
         <CardContent>
           <Tabs defaultValue="create" className="w-full">
             <TabsList className="grid w-full grid-cols-4">
@@ -445,7 +526,30 @@ const BestSeriesEditor: React.FC = () => {
                     </div>
                   </div>
 
-                  <Button onClick={handleCreateSeries} className="w-full">
+                  {/* 크레딧 정보 */}
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <CreditCard className="w-4 h-4 text-blue-600" />
+                        <span className="text-sm font-medium text-blue-900">필요 크레딧</span>
+                      </div>
+                      <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+                        {calculateSeriesCredits(formData.totalEpisodes)} 크레딧
+                      </Badge>
+                    </div>
+                    <div className="flex items-center justify-between mt-2">
+                      <span className="text-sm text-blue-700">보유 크레딧</span>
+                      <Badge variant="outline" className="border-blue-300 text-blue-700">
+                        {(userProfile?.credits?.free || 0) + (userProfile?.credits?.paid || 0)} 크레딧
+                      </Badge>
+                    </div>
+                    <div className="text-xs text-blue-600 mt-2">
+                      • 기본 시리즈: 5 크레딧<br/>
+                      • 에피소드당 2 크레딧 (총 {formData.totalEpisodes * 2} 크레딧)
+                    </div>
+                  </div>
+
+                  <Button onClick={handleCreateSeries} className="w-full" size="lg">
                     <Plus className="h-4 w-4 mr-2" />
                     시리즈 생성
                   </Button>
@@ -606,7 +710,8 @@ const BestSeriesEditor: React.FC = () => {
           )}
         </CardContent>
       </Card>
-    </div>
+      </div>
+    </Layout>
   );
 };
 

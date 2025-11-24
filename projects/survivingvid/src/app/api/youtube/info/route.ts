@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import { YouTubeDownloader } from '@/lib/youtube';
 
 const execAsync = promisify(exec);
 
@@ -19,30 +20,50 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const metadata = await getVideoInfo(body.url);
-
-    if (!metadata) {
+    // URL 유효성 검사
+    if (!YouTubeDownloader.isValidYouTubeUrl(body.url)) {
       return NextResponse.json(
-        { error: '비디오 정보를 가져올 수 없습니다.' },
+        { error: '유효한 YouTube URL이 아닙니다.' },
         { status: 400 }
       );
     }
 
+    // YouTube 영상 정보 추출
+    const videoInfo = await YouTubeDownloader.getVideoInfo(body.url);
+
     return NextResponse.json({
       success: true,
-      data: metadata
+      data: videoInfo
     });
 
   } catch (error) {
     console.error('YouTube 정보 API 오류:', error);
 
-    return NextResponse.json(
-      {
-        error: '비디오 정보를 가져오는 데 실패했습니다.',
-        details: error instanceof Error ? error.message : '알 수 없는 오류'
-      },
-      { status: 500 }
-    );
+    // 기존 방식으로 fallback
+    try {
+      const metadata = await getVideoInfo(body.url);
+
+      if (!metadata) {
+        return NextResponse.json(
+          { error: '비디오 정보를 가져올 수 없습니다.' },
+          { status: 400 }
+        );
+      }
+
+      return NextResponse.json({
+        success: true,
+        data: metadata
+      });
+
+    } catch (fallbackError) {
+      return NextResponse.json(
+        {
+          error: '비디오 정보를 가져오는 데 실패했습니다.',
+          details: error instanceof Error ? error.message : '알 수 없는 오류'
+        },
+        { status: 500 }
+      );
+    }
   }
 }
 

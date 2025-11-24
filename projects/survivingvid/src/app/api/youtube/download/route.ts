@@ -4,6 +4,8 @@ import { promisify } from 'util';
 import path from 'path';
 import fs from 'fs/promises';
 import { v4 as uuidv4 } from 'uuid';
+import { YouTubeDownloader } from '@/lib/youtube';
+import { CreditService } from '@/lib/credits';
 
 const execAsync = promisify(exec);
 
@@ -11,6 +13,7 @@ interface YouTubeDownloadRequest {
   url: string;
   quality?: '360p' | '720p' | '1080p' | 'highest' | 'audio-only';
   format?: 'mp4' | 'mp3' | 'webm';
+  userId?: string;
 }
 
 interface VideoMetadata {
@@ -36,7 +39,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { url, quality = '720p', format = 'mp4' } = body;
+    if (!body.userId) {
+      return NextResponse.json(
+        { error: '사용자 ID가 필요합니다.' },
+        { status: 400 }
+      );
+    }
+
+    const { url, quality = '720p', format = 'mp4', userId } = body;
 
     // yt-dlp 설치 확인
     try {
@@ -58,6 +68,15 @@ export async function POST(request: NextRequest) {
 
     // 다운로드 디렉토리 생성
     await fs.mkdir(outputDir, { recursive: true });
+
+    // 크레딧 확인
+    const canAfford = await CreditService.canAfford(userId, 'download_youtube', 1);
+    if (!canAfford) {
+      return NextResponse.json(
+        { error: '크레딧이 부족합니다. (S-CRD 1개 필요)' },
+        { status: 400 }
+      );
+    }
 
     // 비디오 정보 추출
     const metadata = await getVideoMetadata(url);
@@ -124,6 +143,19 @@ export async function POST(request: NextRequest) {
 
     const filePath = path.join(outputDir, downloadedFile);
     const fileStats = await fs.stat(filePath);
+
+    // 크레딧 차감
+    try {
+      await CreditService.spendCredits(userId, 'download_youtube', 1, {
+        url,
+        downloadId,
+        fileName: downloadedFile,
+        fileSize: fileStats.size
+      });
+    } catch (creditError) {
+      console.error('크레딧 차감 오류:', creditError);
+      // 다운로드는 성공했으므로 계속 진행
+    }
 
     return NextResponse.json({
       success: true,
